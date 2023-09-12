@@ -11,7 +11,7 @@ def parser() -> argparse.ArgumentParser:
                    default=1, help='number of invert bits')
     p.add_argument('-w', '--width', default=7, help='width of image')
     p.add_argument('--height', default=7, help='height of image')
-    p.add_argument('-s', '--seed', type=int, help='seed for random generators')
+    # p.add_argument('-s', '--seed', type=int, help='seed for random generators')
     return p
 
 
@@ -30,4 +30,5 @@ def main() -> int:
 
 
 if __name__ == '__main__':
+    raise NotImplementedError
     exit(main())
