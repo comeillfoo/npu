@@ -1,1 +1,1 @@
-# npu
+# Neural Processor
