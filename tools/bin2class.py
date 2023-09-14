@@ -1,43 +1,30 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 from tkinter import *
-from PIL import ImageTk, Image
-import os, argparse, numpy as np, shutil
-
-
-def bin2image_tk(file: str, width: int, height: int) -> ImageTk:
-    vector = None
-    with open(file, 'rb') as f:
-        vector = f.read()
-    if len(vector) != width * height:
-        raise AttributeError
-    vector = np.reshape(list(map(bool, vector)), (width, height))
-    img = Image.fromarray(vector)
-    img = img.resize((width * 20, height * 20), Image.Resampling.BICUBIC)
-    return ImageTk.PhotoImage(img) # one pixel per byte
+import os, argparse, shutil
+from bin2img import bin2image_tk
 
 
 # parse arguments
-p = argparse.ArgumentParser('dataset_sorter')
+p = argparse.ArgumentParser('bin2class')
 p.add_argument('data', help='folder with dataset')
 p.add_argument('-w', '--width', default=7, help='image width')
 p.add_argument('--height', default=7, help='image height')
 p.add_argument('-c', '--classes', default=['circles', 'squares', 'triangles'], nargs='*')
 args = p.parse_args()
 
-
 # configure app
 root = Tk()
 
 fullpath = lambda name: os.path.join(args.data, name)
-def converter(name: str) -> tuple:
-    file = fullpath(name)
+def converter(file: str) -> tuple:
     return (file, bin2image_tk(file, args.width, args.height))
 
 
 # prepare dataset
 dataset = { file: image
            for file, image in map(converter,
-                                  filter(lambda path: not os.path.isfile(path), os.listdir(args.data))) }
+                                  filter(lambda path: os.path.isfile(path),
+                                         map(fullpath, os.listdir(args.data)))) }
 files = set(dataset.keys())
 
 ius = Label(root, image=None)
@@ -52,6 +39,8 @@ def next_image(filevar: StringVar):
     if not files:
         root.destroy()
         return
+    if filevar.get() != '':
+        print(f'processed {filevar.get()}, remaining: {len(files) - 1}')
     file = files.pop()
     filevar.set(file)
     ius.config(image=dataset[file])
@@ -65,7 +54,6 @@ for class_ in args.classes:
     os.mkdir(class_dir)
     def class_btn_handler_generator(class_dir: str):
         def class_btn_handler():
-            print('copy', filevar.get(), class_dir)
             shutil.copy(filevar.get(), class_dir)
             next_image(filevar)
         return class_btn_handler

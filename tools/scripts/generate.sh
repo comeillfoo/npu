@@ -3,11 +3,14 @@
 # @brief script path
 AT="${0%/*}"
 
-# @brief path to primitives
-SOURCE="${1:-assets}"
+# @brief number of binaries generated for every number of inverted pixels
+BIN_PER_INVERTS="${1:-20}"
 
-# @brief number of binaries generated per primitive
-BIN_PER_IMG="${2:-20}"
+# @brief maximum number of inverted pixels in image
+MAX_INVERTS="${2:-13}"
+
+# @brief path to primitives
+SOURCE="${3:-assets}"
 
 # @brief path to tools
 TOOLS="${4:-$(realpath "${AT}/..")}"
@@ -30,13 +33,14 @@ fi
 mkdir "${DATA}"
 
 for image in "${SOURCE}"/*; do
+    echo "${image}"
     binin="${image/.bmp/.bin}"
-    python3 "${BMP2BIN}" "${image}" -o "${binin}" # convert to binary
-    # TODO: noisify
-    for ((i=1; i <= BIN_PER_IMG; i++)); do
-        binout="${DATA}/${i}_${binin##*/}"
-        # python3 "${NOISE}" "${binin}" --invert="${i}" -o "${binout}"
-        cp "${binin}" "${binout}"
+    python3 "${BMP2BIN}" -o "${binin}" "${image}"
+    for ((i=0; i < BIN_PER_INVERTS; i++)); do
+        for ((j=1; j <= MAX_INVERTS; j++)); do
+            binout="${DATA}/${i}_${j}_${binin##*/}"
+            python3 "${NOISE}" -i "${j}" -o "${binout}" "${binin}"
+        done
     done
     rm -f "${binin}"
 done
