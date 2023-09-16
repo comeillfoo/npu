@@ -2,4 +2,4 @@
 
 ## usage
 
-`./run.sh <config path> [<neuron per layer> ...]`
+`./run.sh <config path> [<neurons per layer> ...]`

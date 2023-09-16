@@ -11,7 +11,7 @@ LIBS=-lm
 
 EXEC=npu
 
-all: $(BUILD_DIR)/main.o
+all: $(BUILD_DIR)/main.o $(BUILD_DIR)/neural_net.o
 	$(LD) $(LDFLAGS) -o $(EXEC) $^ $(LIBS)
 
 $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c

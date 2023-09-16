@@ -4,12 +4,16 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+
+#include <math.h>
+
 #include <sys/types.h>
 #include <dirent.h>
 
+#include <stdint.h>
 
-#define MAX_LAYERS 20
-#define MAX_NEURALS_PER_LAYER 20
+#include "neural_net.h"
+
 
 enum network_parameters {
     NP_ACCURACY_LIMIT = 0,
@@ -30,6 +34,11 @@ enum data_classes {
     DC_SQUARES,
     DC_TRIANGLES,
     DC_CLASSES
+};
+
+struct dataset_record {
+    double image[NP_IN_LAYER_SIZE];
+    uint8_t target;
 };
 
 
@@ -110,7 +119,7 @@ static bool parse_args(int argc, char** argv)
     ret &= set_size_param(NP_EPOCH_LIMIT, &epoch_limit);
 
     ret &= set_size_param(NP_HIDDEN_LAYERS, &hidden_layers);
-    if (hidden_layers > MAX_LAYERS - 2) return false;
+    if (hidden_layers > MAX_LAYERS - 1) return false;
 
     if (!ret) return false; // all params parsing SUCCEED
 
@@ -120,7 +129,7 @@ static bool parse_args(int argc, char** argv)
 
     if (argc - 1 < hidden_layers) return false;
     for (size_t i = 1; i <= hidden_layers; ++i)
-        if (!parse_size(argv[i], &neurons_count[i])) return false;
+        if (!parse_size(argv[i], &neurons_count[i - 1]) || neurons_count[i - 1] > MAX_NEURALS_PER_LAYER) return false;
 
     debug = getenv("DEBUG") != NULL;
     return true;
@@ -130,8 +139,7 @@ typedef double (*produce_action)(void);
 
 static double rand_weight(void)
 {
-    // TODO: generate using normal distribution
-    return rand_range(-1.0, 1.0);
+    return rand_range(-1.0, 1.0); // TODO: generate using normal distribution
 }
 
 static void map_weights(produce_action mapper)
@@ -174,8 +182,7 @@ int main(int argc, char** argv)
     if (!parse_args(argc, argv)) return EINVAL;
 
     // init weights and sizes
-    neurons_count[0] = NP_IN_LAYER_SIZE;
-    neurons_count[hidden_layers + 1] = NP_OUT_LAYER_SIZE;
+    neurons_count[hidden_layers] = NP_OUT_LAYER_SIZE;
     map_weights(&rand_weight);
 
     // build path to classes
@@ -184,14 +191,15 @@ int main(int argc, char** argv)
         [DC_SQUARES] = {0},
         [DC_TRIANGLES] = {0}
     };
+    const size_t dataset_path_len = strlen(dataset_path);
     strncpy(class_paths[DC_CIRCLES], dataset_path, PATH_MAX);
-    strncat(class_paths[DC_CIRCLES], "/circles", PATH_MAX - strlen(dataset_path));
+    strncat(class_paths[DC_CIRCLES], "/circles", PATH_MAX - dataset_path_len);
 
     strncpy(class_paths[DC_SQUARES], dataset_path, PATH_MAX);
-    strncat(class_paths[DC_SQUARES], "/squares", PATH_MAX - strlen(dataset_path));
+    strncat(class_paths[DC_SQUARES], "/squares", PATH_MAX - dataset_path_len);
 
     strncpy(class_paths[DC_TRIANGLES], dataset_path, PATH_MAX);
-    strncat(class_paths[DC_TRIANGLES], "/triangles", PATH_MAX - strlen(dataset_path));
+    strncat(class_paths[DC_TRIANGLES], "/triangles", PATH_MAX - dataset_path_len);
 
     // count dataset size
     size_t dataset_size = 0;
@@ -203,10 +211,47 @@ int main(int argc, char** argv)
         } else return ENOENT;
     }
 
-    // read dataset
     const size_t
         test_size = test_ratio * dataset_size,
         train_size = dataset_size - test_size;
+
+    // read dataset
+    struct dataset_record dataset[dataset_size];
+    bool isset[dataset_size];
+    memset(isset, false, dataset_size);
+    uint8_t im_pixels[NP_IN_LAYER_SIZE] = {0};
+    for (size_t i = 0; i < DC_CLASSES; ++i) {
+        const size_t class_path_len = strlen(class_paths[i]);
+        DIR* dp = opendir(class_paths[i]);
+        if (dp != NULL) {
+            struct dirent* ep;
+            while ((ep = readdir(dp))) {
+                // build path to image
+                char image_path[PATH_MAX] = {0};
+                strncpy(image_path, class_paths[i], PATH_MAX);
+                strncat(image_path, "/", PATH_MAX - class_path_len);
+                strncat(image_path, ep->d_name, PATH_MAX - class_path_len - 1);
+
+                // compute idx
+                size_t idx = 0;
+                do {
+                    idx = rand() % dataset_size;
+                } while (isset[idx]);
+                isset[idx] = true;
+
+                // read image
+                FILE* image_file = fopen(image_path, "rb");
+                fread(im_pixels, sizeof(uint8_t), NP_IN_LAYER_SIZE, image_file);
+                fclose(image_file);
+
+                for (size_t j = 0; j < NP_IN_LAYER_SIZE; ++j)
+                    dataset[idx].image[j] = (double) im_pixels[j];
+                dataset[idx].target = i; // set class
+            }
+            closedir(dp);
+        } else return ENOENT;
+    }
+
 
     printf("----  PARAMS  ----\n");
     printf("%s: %lf\n", param_names[NP_ACCURACY_LIMIT], accuracy_limit);
@@ -224,5 +269,23 @@ int main(int argc, char** argv)
     foreach_weights(&print_weight);
     printf("\n");
 
+    for (size_t i = 0; i < dataset_size; ++i) {
+        if (!isset[i]) {
+            fprintf(stderr, "SKIP: bad init\n");
+            break;
+        }
+        printf("{ ");
+        for (size_t j = 0; j < NP_IN_LAYER_SIZE; ++j)
+            printf("%hhu, ", (uint8_t) dataset[i].image[j]);
+        printf(" }: %hhu\n", dataset[i].target);
+    }
+
+    // train
+    double p[NP_OUT_LAYER_SIZE] = {0};
+    classify(dataset[0].image, NP_IN_LAYER_SIZE,
+        hidden_layers, weights, neurons_count,
+        p);
+
+    printf("{ %lf, %lf, %lf }\n", p[0], p[1], p[2]);
     return 0;
 }
