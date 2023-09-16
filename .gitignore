@@ -1,5 +1,8 @@
 .*
 *.bin
 __pycache__
+build
+massif.out.*
+npu
 !.gitignore
 !data/**/*.bin
