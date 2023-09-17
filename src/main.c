@@ -120,6 +120,7 @@ static bool parse_args(int argc, char** argv)
     // parse sizes
     ret &= set_size_param(NP_EPOCH_LIMIT, &epoch_limit);
     ret &= set_size_param(NP_IN_LAYER_SIZE, &in_layer_size);
+    if (in_layer_size > MAX_IN_LAYER_SIZE) return false;
     ret &= set_size_param(NP_HIDDEN_LAYERS, &hidden_layers);
     if (hidden_layers > MAX_LAYERS - 1) return false;
 
