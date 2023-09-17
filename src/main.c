@@ -264,6 +264,7 @@ int main(int argc, char** argv)
     printf("%s: %.2lf\n", param_names[NP_TUNE_LIMIT], tune_limit);
     printf("dataset_size: %zu\n", dataset_size);
     printf("%s: %zu\n", param_names[NP_EPOCH_LIMIT], epoch_limit);
+    printf("%s: %zu\n", param_names[NP_IN_LAYER_SIZE], in_layer_size);
     printf("%s: %zu\n", param_names[NP_HIDDEN_LAYERS], hidden_layers);
     printf("classes: [ %s", class_paths[0]);
     for (size_t i = 1; i < DC_CLASSES; ++i)
