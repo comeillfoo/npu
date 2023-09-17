@@ -5,7 +5,7 @@ INC_DIR=include
 SOURCE_DIR=src
 BUILD_DIR=build
 
-CFLAGS=-std=gnu11 -Wall -pedantic -I$(INC_DIR)
+CFLAGS=-std=gnu11 -Wall -pedantic -I$(INC_DIR) $(addprefix -D,$(MACROSES))
 
 LIBS=-lm
 

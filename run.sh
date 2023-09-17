@@ -33,7 +33,7 @@ if [ ! -f "${CONFIG}" ]; then
 fi
 
 source "${CONFIG}"
-export ACCURACY_LIMIT TUNE_LIMIT TEST_RATIO EPOCH_LIMIT DATASET_PATH HIDDEN_LAYERS
+export ACCURACY_LIMIT TUNE_LIMIT ALPHA EPOCH_LIMIT DATASET_PATH HIDDEN_LAYERS
 
 if [ -n "${DEBUG}" ]; then
     valgrind --tool=massif "${EXEC}" "${@}"
