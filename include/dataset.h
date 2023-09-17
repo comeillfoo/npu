@@ -3,13 +3,14 @@
 
 #include <stdint.h>
 
+#define MAX_IN_LAYER_SIZE 60
+
 enum network_constants {
-    NP_IN_LAYER_SIZE = 49,
-    NP_OUT_LAYER_SIZE = 3
+    NP_OUT_LAYER_SIZE=3
 };
 
 struct dataset_record {
-    double image[NP_IN_LAYER_SIZE];
+    double image[MAX_IN_LAYER_SIZE];
     uint8_t target;
 };
 

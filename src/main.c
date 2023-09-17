@@ -28,6 +28,7 @@ enum network_parameters {
     NP_ALPHA,
     NP_DATASET_PATH,
     NP_EPOCH_LIMIT,
+    NP_IN_LAYER_SIZE,
     NP_HIDDEN_LAYERS
 };
 
@@ -48,10 +49,11 @@ static const char* param_names[] = {
     [NP_ALPHA] = "ALPHA",
     [NP_DATASET_PATH] = "DATASET_PATH",
     [NP_EPOCH_LIMIT] = "EPOCH_LIMIT",
+    [NP_IN_LAYER_SIZE] = "IN_LAYER_SIZE",
     [NP_HIDDEN_LAYERS] = "HIDDEN_LAYERS"
 };
 
-static size_t epoch_limit = 0, hidden_layers = 0;
+static size_t epoch_limit = 0, hidden_layers = 0, in_layer_size = 1;
 static double accuracy_limit = 0.0, tune_limit = 0.0, alpha = 0.25;
 static char* dataset_path = NULL;
 
@@ -117,7 +119,7 @@ static bool parse_args(int argc, char** argv)
 
     // parse sizes
     ret &= set_size_param(NP_EPOCH_LIMIT, &epoch_limit);
-
+    ret &= set_size_param(NP_IN_LAYER_SIZE, &in_layer_size);
     ret &= set_size_param(NP_HIDDEN_LAYERS, &hidden_layers);
     if (hidden_layers > MAX_LAYERS - 1) return false;
 
@@ -181,7 +183,8 @@ static void foreach_weights(size_t input_length, consume_action action)
 // @param [in] 3: alpha                    - ALPHA
 // @param [in] 4: path to dataset          - DATASET_PATH
 // @param [in] 5: max epoch limit          - EPOCH_LIMIT
-// @param [in] 6: number of hidden layers  - HIDDEN_LAYERS
+// @param [in] 6: number of inputs         - IN_LAYER_SIZE
+// @param [in] 7: number of hidden layers  - HIDDEN_LAYERS
 // @param [in] *: number of neurons in every hidden layer - argv[i], i = 1..=HIDDEN_LAYERS
 int main(int argc, char** argv)
 {
@@ -190,7 +193,7 @@ int main(int argc, char** argv)
     srand(time(NULL)); // random seed
     // init weights and sizes
     neurons_count[hidden_layers] = NP_OUT_LAYER_SIZE;
-    map_weights(NP_IN_LAYER_SIZE, &rand_weight);
+    map_weights(in_layer_size, &rand_weight);
 
     // build path to classes
     char class_paths[][PATH_MAX] = {
@@ -222,7 +225,8 @@ int main(int argc, char** argv)
     struct dataset_record dataset[dataset_size];
     bool isset[dataset_size];
     memset(isset, false, dataset_size);
-    uint8_t imm_pixels[NP_IN_LAYER_SIZE] = {0};
+    uint8_t imm_pixels[in_layer_size];
+    memset(imm_pixels, 0, in_layer_size);
     for (size_t i = 0; i < DC_CLASSES; ++i) {
         const size_t class_path_len = strlen(class_paths[i]);
         DIR* dp = opendir(class_paths[i]);
@@ -244,10 +248,10 @@ int main(int argc, char** argv)
 
                 // read image
                 FILE* image_file = fopen(image_path, "rb");
-                fread(imm_pixels, sizeof(uint8_t), NP_IN_LAYER_SIZE, image_file);
+                fread(imm_pixels, sizeof(uint8_t), in_layer_size, image_file);
                 fclose(image_file);
 
-                for (size_t j = 0; j < NP_IN_LAYER_SIZE; ++j)
+                for (size_t j = 0; j < in_layer_size; ++j)
                     dataset[idx].image[j] = (double) imm_pixels[j];
                 dataset[idx].target = i; // set class
             }
@@ -267,7 +271,7 @@ int main(int argc, char** argv)
     printf(" ]\n");
 
     printf("---- INITIAL WEIGHTS ----\n");
-    foreach_weights(NP_IN_LAYER_SIZE, &print_weight);
+    foreach_weights(in_layer_size, &print_weight);
     printf("\n");
 
     // train
@@ -293,7 +297,7 @@ int main(int argc, char** argv)
     #endif
     printf("epoch: %zu\n", epoch);
     printf("---- TUNED WEIGHTS ----\n");
-    foreach_weights(NP_IN_LAYER_SIZE, &print_weight);
+    foreach_weights(in_layer_size, &print_weight);
     printf("\n");
     return 0;
 }
