@@ -128,8 +128,10 @@ static bool parse_args(int argc, char** argv)
     if (dataset_path == NULL) return false;
 
     if (argc - 1 < hidden_layers) return false;
-    for (size_t i = 1; i <= hidden_layers; ++i)
-        if (!parse_size(argv[i], &neurons_count[i - 1]) || neurons_count[i - 1] > MAX_NEURALS_PER_LAYER) return false;
+    for (size_t i = 1; i <= hidden_layers; ++i) {
+        if (!parse_size(argv[i], &neurons_count[i - 1]) || neurons_count[i - 1] > MAX_NEURALS_PER_LAYER)
+            return false;
+    }
 
     debug = getenv("DEBUG") != NULL;
     return true;
@@ -281,11 +283,11 @@ int main(int argc, char** argv)
     }
 
     // train
-    double p[NP_OUT_LAYER_SIZE] = {0};
+    double p[MAX_LAYERS][MAX_NEURALS_PER_LAYER] = {0};
     classify(dataset[0].image, NP_IN_LAYER_SIZE,
         hidden_layers, weights, neurons_count,
         p);
 
-    printf("{ %lf, %lf, %lf }\n", p[0], p[1], p[2]);
+    printf("{ %lf, %lf, %lf }\n", p[hidden_layers][0], p[hidden_layers][1], p[hidden_layers][2]);
     return 0;
 }

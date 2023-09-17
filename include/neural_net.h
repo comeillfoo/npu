@@ -19,6 +19,6 @@ void apply(
 
 void classify(double input[], size_t input_length,
     size_t hidden_layers, double weights[MAX_LAYERS][MAX_NEURALS_PER_LAYER],
-    size_t neurons_count[MAX_LAYERS], double output[]);
+    size_t neurons_count[MAX_LAYERS], double output[MAX_LAYERS][MAX_NEURALS_PER_LAYER]);
 
 #endif // _NEURAL_NET_H_
