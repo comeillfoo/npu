@@ -60,7 +60,7 @@ void classify(double input[], size_t input_length,
     #endif
 }
 
-static void class2probabilities(uint8_t target, size_t classes, double targets[])
+void class2probabilities(uint8_t target, size_t classes, double targets[])
 {
     for (size_t i = 0; i < classes; ++i) targets[i] = 0.0;
     targets[target] = 1.0;

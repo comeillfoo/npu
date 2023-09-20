@@ -22,6 +22,8 @@ void classify(double input[], size_t input_length,
     size_t hidden_layers, double weights[MAX_LAYERS][MAX_NEURALS_PER_LAYER][MAX_NEURALS_PER_LAYER],
     size_t neurons_count[MAX_LAYERS], double output[MAX_LAYERS][MAX_NEURALS_PER_LAYER]);
 
+void class2probabilities(uint8_t target, size_t classes, double targets[]);
+
 double layer_error(double targets[], size_t classes, double outputs[MAX_NEURALS_PER_LAYER]);
 
 double run_epoch(struct dataset_record dataset[], size_t dataset_size,

@@ -18,6 +18,8 @@
 
 #include <time.h>
 
+#include <float.h>
+
 #include "neural_net.h"
 #include "dataset.h"
 
@@ -29,7 +31,8 @@ enum network_parameters {
     NP_DATASET_PATH,
     NP_EPOCH_LIMIT,
     NP_IN_LAYER_SIZE,
-    NP_HIDDEN_LAYERS
+    NP_HIDDEN_LAYERS,
+    NP_SEED
 };
 
 enum data_classes {
@@ -37,6 +40,12 @@ enum data_classes {
     DC_SQUARES,
     DC_TRIANGLES,
     DC_CLASSES
+};
+
+static const char* class_names[] = {
+    [DC_CIRCLES] = "circle",
+    [DC_SQUARES] = "square",
+    [DC_TRIANGLES] = "triangle"
 };
 
 
@@ -50,12 +59,14 @@ static const char* param_names[] = {
     [NP_DATASET_PATH] = "DATASET_PATH",
     [NP_EPOCH_LIMIT] = "EPOCH_LIMIT",
     [NP_IN_LAYER_SIZE] = "IN_LAYER_SIZE",
-    [NP_HIDDEN_LAYERS] = "HIDDEN_LAYERS"
+    [NP_HIDDEN_LAYERS] = "HIDDEN_LAYERS",
+    [NP_SEED] = "SEED"
 };
 
 static size_t epoch_limit = 0, hidden_layers = 0, in_layer_size = 1;
 static double accuracy_limit = 0.0, tune_limit = 0.0, alpha = 0.25;
 static char* dataset_path = NULL;
+static unsigned int seed = 0;
 
 #ifdef DEBUG
 // record learning time, epoch number, time of output calculation
@@ -126,6 +137,10 @@ static bool parse_args(int argc, char** argv)
 
     if (!ret) return false; // all params parsing SUCCEED
 
+    size_t _seed = 0;
+    seed = set_size_param(NP_SEED, &_seed)? _seed : time(NULL);
+    srand(seed);
+
     dataset_path = getenv(param_names[NP_DATASET_PATH]);
     // fprintf(stderr, "dataset: %s\n", dataset_path);
     if (dataset_path == NULL) return false;
@@ -179,6 +194,53 @@ static void foreach_weights(size_t input_length, consume_action action)
 }
 
 
+static size_t find_example(struct dataset_record dataset[], size_t dataset_size,
+    double weights[MAX_LAYERS][MAX_NEURALS_PER_LAYER][MAX_NEURALS_PER_LAYER], size_t hidden_layers,
+    size_t neurons_count[MAX_LAYERS], bool is_correct, double probs[MAX_NEURALS_PER_LAYER], double* accuracy_p)
+{
+    size_t classes = neurons_count[hidden_layers];
+    size_t idx = 0;
+    double accuracy = 0.0;
+    double diff = is_correct ? DBL_MAX : 0;
+    for (size_t i = 0; i < dataset_size; ++i) {
+        double outputs[MAX_LAYERS][MAX_NEURALS_PER_LAYER] = {{0.0}};
+        double targets[classes];
+        const size_t image_size = sizeof(dataset[i].image);
+
+        classify(dataset[i].image, image_size,
+            hidden_layers, weights, neurons_count, outputs);
+
+        size_t c = dataset[i].target;
+        class2probabilities(c, classes, targets);
+
+        double e = layer_error(targets, classes, outputs[hidden_layers]);
+        e = 1.0 - (e < 0.0? (-e) : e); // TODO: ccmp
+
+        double d = targets[c] - outputs[hidden_layers][c];
+        if ((is_correct ? (d < diff) : (d > diff))) {
+            idx = i;
+            accuracy = e;
+            diff = d;
+            for (size_t j = 0; j < MAX_NEURALS_PER_LAYER; ++j)
+                probs[j] = outputs[hidden_layers][j];
+        }
+    }
+    *accuracy_p = accuracy;
+    return idx;
+}
+
+
+static void save_image(struct dataset_record record, size_t size, const char* path)
+{
+    uint8_t raw_image[size];
+    for (size_t i = 0; i < size; ++i)
+        raw_image[i] = record.image[i] == 0.0? 0 : 1;
+    FILE* f = fopen(path, "wb");
+    fwrite(raw_image, sizeof(uint8_t), size, f);
+    fclose(f);
+}
+
+
 // @param [in] 1: training accuracy limit  - ACCURACY_LIMIT
 // @param [in] 2: correction limit         - TUNE_LIMIT
 // @param [in] 3: alpha                    - ALPHA
@@ -186,12 +248,12 @@ static void foreach_weights(size_t input_length, consume_action action)
 // @param [in] 5: max epoch limit          - EPOCH_LIMIT
 // @param [in] 6: number of inputs         - IN_LAYER_SIZE
 // @param [in] 7: number of hidden layers  - HIDDEN_LAYERS
+// @param [in] 8: random seed              - SEED (optional)
 // @param [in] *: number of neurons in every hidden layer - argv[i], i = 1..=HIDDEN_LAYERS
 int main(int argc, char** argv)
 {
     if (!parse_args(argc, argv)) return EINVAL;
 
-    srand(time(NULL)); // random seed
     // init weights and sizes
     neurons_count[hidden_layers] = NP_OUT_LAYER_SIZE;
     map_weights(in_layer_size, &rand_weight);
@@ -263,10 +325,13 @@ int main(int argc, char** argv)
     printf("----  PARAMS  ----\n");
     printf("%s: %.2lf\n", param_names[NP_ACCURACY_LIMIT], accuracy_limit);
     printf("%s: %.2lf\n", param_names[NP_TUNE_LIMIT], tune_limit);
-    printf("dataset_size: %zu\n", dataset_size);
+    printf("%s: %.2lf\n", param_names[NP_ALPHA], alpha);
+    printf("%s: %s\n", param_names[NP_DATASET_PATH], dataset_path);
     printf("%s: %zu\n", param_names[NP_EPOCH_LIMIT], epoch_limit);
     printf("%s: %zu\n", param_names[NP_IN_LAYER_SIZE], in_layer_size);
     printf("%s: %zu\n", param_names[NP_HIDDEN_LAYERS], hidden_layers);
+    printf("%s: %u\n", param_names[NP_SEED], seed);
+    printf("dataset_size: %zu\n", dataset_size);
     printf("classes: [ %s", class_paths[0]);
     for (size_t i = 1; i < DC_CLASSES; ++i)
         printf(", %s", class_paths[i]);
@@ -297,9 +362,29 @@ int main(int argc, char** argv)
     printf("learn time: %ldus; avg. output computation delay: %ldus; ",
         ((learn_end.tv_sec - learn_start.tv_sec) * 1000000L) + learn_end.tv_usec - learn_start.tv_usec, output_delay / epoch);
     #endif
-    printf("epoch: %zu\n", epoch);
+    printf("epoch: %zu; accuracy: %lf\n", epoch, accuracy);
     printf("---- TUNED WEIGHTS ----\n");
     foreach_weights(in_layer_size, &print_weight);
     printf("\n");
+
+    // save the best one and the worst one
+    double acc = 0.0;
+    double probs[MAX_NEURALS_PER_LAYER] = {0.0};
+    size_t idx = find_example(dataset, dataset_size, weights,
+        hidden_layers, neurons_count, true, probs, &acc);
+    printf("Correct on %zu: %lf with [", idx, acc);
+    for (size_t i = 0; i < DC_CLASSES; ++i)
+        printf(" %lf,", probs[i]);
+    printf(" ], expected %s\n", class_names[dataset[idx].target]);
+    save_image(dataset[idx], in_layer_size, "./hit.bin");
+
+    idx = find_example(dataset, dataset_size, weights,
+        hidden_layers, neurons_count, false, probs, &acc);
+    printf("Fault on %zu: %lf with [", idx, acc);
+    for (size_t i = 0; i < DC_CLASSES; ++i)
+        printf(" %lf,", probs[i]);
+    printf(" ], expected %s\n", class_names[dataset[idx].target]);
+    save_image(dataset[idx], in_layer_size, "./miss.bin");
+
     return 0;
 }
