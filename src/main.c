@@ -339,7 +339,7 @@ int main(int argc, char** argv)
 
     printf("---- INITIAL WEIGHTS ----\n");
     foreach_weights(in_layer_size, &print_weight);
-    printf("\n");
+    printf("\n\n");
 
     // train
     double accuracy = 0.0;
@@ -349,6 +349,7 @@ int main(int argc, char** argv)
     getrusage(RUSAGE_SELF, &r);
     struct timeval learn_start = r.ru_utime;
     #endif
+
     do {
         accuracy = run_epoch(dataset, dataset_size,
             weights, hidden_layers, neurons_count,
@@ -356,6 +357,7 @@ int main(int argc, char** argv)
         epoch++;
     } while (accuracy < accuracy_limit
         && epoch < epoch_limit); // TODO: ccmp
+
     #ifdef DEBUG
     getrusage(RUSAGE_SELF, &r);
     struct timeval learn_end = r.ru_utime;
@@ -365,7 +367,7 @@ int main(int argc, char** argv)
     printf("epoch: %zu; accuracy: %lf\n", epoch, accuracy);
     printf("---- TUNED WEIGHTS ----\n");
     foreach_weights(in_layer_size, &print_weight);
-    printf("\n");
+    printf("\n\n");
 
     // save the best one and the worst one
     double acc = 0.0;
