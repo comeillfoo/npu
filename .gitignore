@@ -6,3 +6,4 @@ massif.out.*
 npu
 !.gitignore
 !data/**/*.bin
+!model/.gitignore
