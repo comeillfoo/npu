@@ -1,14 +1,16 @@
 #ifndef _SYSREQS_H_
 #define _SYSREQS_H_
 
-#define SYS_MAX_IMAGE_SIZE        (64ULL)
-#define SYS_MAX_WEIGHTS_PER_LAYER (SYS_MAX_IMAGE_SIZE * SYS_MAX_IMAGE_SIZE)
-#define SYS_LAYER_COUNT           (32ULL)
+#define SYS_RQ_MAX_IMAGES            (30ULL)
 
-#define SYS_BUS_WIDTH             SYS_MAX_IMAGE_SIZE
+#define SYS_RQ_MAX_IMAGE_SIZE        (64ULL)
+#define SYS_RQ_MAX_WEIGHTS_PER_LAYER (SYS_RQ_MAX_IMAGE_SIZE * SYS_RQ_MAX_IMAGE_SIZE)
+#define SYS_RQ_LAYER_COUNT           (32ULL)
 
-#define SYS_MEMADDR_WIDTH         (21ULL)
-#define SYS_MEMORY_COLS           SYS_BUS_WIDTH
-#define SYS_MEMORY_ROWS           (SYS_LAYER_COUNT * (SYS_MAX_IMAGE_SIZE + 1))
+#define SYS_RQ_BUS_WIDTH             SYS_RQ_MAX_IMAGE_SIZE
+
+#define SYS_RQ_MEMADDR_WIDTH         (21ULL)
+#define SYS_RQ_MEMORY_COLS           SYS_RQ_BUS_WIDTH
+#define SYS_RQ_MEMORY_ROWS           (SYS_RQ_LAYER_COUNT * (SYS_RQ_MAX_IMAGE_SIZE + 1))
 
 #endif // _SYSREQS_H_

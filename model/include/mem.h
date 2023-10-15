@@ -8,7 +8,7 @@ SC_MODULE(Mem)
 {
 
     sc_in<bool>  mem_clk_i;
-    sc_in<sc_uint<SYS_MEMADDR_WIDTH>> mem_addr_bi;
+    sc_in<sc_uint<SYS_RQ_MEMADDR_WIDTH>> mem_addr_bi;
     sc_vector<sc_in<double>>  mem_data_bi;
     sc_vector<sc_out<double>> mem_data_bo;
     sc_in<bool> mem_wr_i;
@@ -23,7 +23,7 @@ SC_MODULE(Mem)
     void bus_read();
 
 private:
-    double mem[SYS_MEMORY_ROWS][SYS_MEMORY_COLS];
+    double mem[SYS_RQ_MEMORY_ROWS][SYS_RQ_MEMORY_COLS];
 
     size_t row(size_t addr);
 };

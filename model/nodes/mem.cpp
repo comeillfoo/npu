@@ -5,8 +5,8 @@ Mem::Mem(sc_module_name nm) :
     sc_module(nm),
     DEFINE_PORT(mem_clk_i),
     DEFINE_PORT(mem_addr_bi),
-    DEFINE_PORTVEC(mem_data_bi, SYS_BUS_WIDTH),
-    DEFINE_PORTVEC(mem_data_bo, SYS_BUS_WIDTH),
+    DEFINE_PORTVEC(mem_data_bi, SYS_RQ_BUS_WIDTH),
+    DEFINE_PORTVEC(mem_data_bo, SYS_RQ_BUS_WIDTH),
     DEFINE_PORT(mem_wr_i),
     DEFINE_PORT(mem_rd_i)
 
@@ -35,7 +35,7 @@ void Mem::bus_read()
 {
     size_t r = row(mem_addr_bi.read());
     if (mem_wr_i.read()) {
-        for (size_t c = 0; c < SYS_MEMORY_COLS; ++c)
+        for (size_t c = 0; c < SYS_RQ_MEMORY_COLS; ++c)
             mem[r][c] = mem_data_bi[c].read();
     }
 }
@@ -44,6 +44,6 @@ void Mem::bus_write()
 {
     size_t r = row(mem_addr_bi.read());
     if(mem_rd_i.read())
-        for (size_t c = 0; c < SYS_MEMORY_COLS; ++c)
+        for (size_t c = 0; c < SYS_RQ_MEMORY_COLS; ++c)
             mem_data_bo[c].write(mem[r][c]);
 }

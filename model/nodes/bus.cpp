@@ -6,9 +6,9 @@
     DEFINE_PORT(dev##_rd_i), \
     DEFINE_PORT(dev##_addr_bi), \
     DEFINE_PORT(dev##_brq_i), \
-    DEFINE_PORTVEC(dev##_data_bi, SYS_BUS_WIDTH), \
+    DEFINE_PORTVEC(dev##_data_bi, SYS_RQ_BUS_WIDTH), \
     DEFINE_PORT(dev##_bgt_o), \
-    DEFINE_PORTVEC(dev##_data_bo, SYS_BUS_WIDTH)
+    DEFINE_PORTVEC(dev##_data_bo, SYS_RQ_BUS_WIDTH)
 
 #define INIT_DEVICE_PORTS(dev) \
     for (size_t i = 0; i < dev##_data_bo.size(); ++i) \
@@ -23,9 +23,9 @@ Bus::Bus(sc_module_name nm) :
     DEFINE_DEVICE_PORTS(dma2),
     DEFINE_DEVICE_PORTS(dma3),
     DEFINE_DEVICE_PORTS(dma4),
-    DEFINE_PORTVEC(bus_data_bi, SYS_BUS_WIDTH),
     DEFINE_PORT(bus_addr_bo),
-    DEFINE_PORTVEC(bus_data_bo, SYS_BUS_WIDTH),
+    DEFINE_PORTVEC(bus_data_bi, SYS_RQ_BUS_WIDTH),
+    DEFINE_PORTVEC(bus_data_bo, SYS_RQ_BUS_WIDTH),
     DEFINE_PORT(bus_wr_o),
     DEFINE_PORT(bus_rd_o)
 {
@@ -74,7 +74,7 @@ void Bus::bus_service(
     sc_in<bool> &dev_brq_i,
     sc_in<bool> &dev_wr_i,
     sc_in<bool> &dev_rd_i,
-    sc_in<sc_uint<SYS_MEMADDR_WIDTH>> &dev_addr_bi,
+    sc_in<sc_uint<SYS_RQ_MEMADDR_WIDTH>> &dev_addr_bi,
     sc_vector<sc_in<double>> &dev_data_bi,
     sc_out<bool> &dev_bgt_o,
     sc_vector<sc_out<double>> &dev_data_bo)
