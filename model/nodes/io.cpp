@@ -173,5 +173,3 @@ void Io::io_routine()
     }
     sc_stop();
 }
-
-
