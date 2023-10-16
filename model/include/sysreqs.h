@@ -13,4 +13,7 @@
 #define SYS_RQ_MEMORY_COLS           SYS_RQ_BUS_WIDTH
 #define SYS_RQ_MEMORY_ROWS           (SYS_RQ_LAYER_COUNT * (SYS_RQ_MAX_IMAGE_SIZE + 1))
 
+#define SYS_RQ_LOCAL_MEMADDR_WIDTH   (14ULL)
+#define SYS_RQ_LOCAL_MEM_ROWS        (18ULL)
+
 #endif // _SYSREQS_H_

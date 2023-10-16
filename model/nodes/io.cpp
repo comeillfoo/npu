@@ -15,10 +15,10 @@ Io::Io(sc_module_name nm,
     DEFINE_PORTVEC(io_data_bi, SYS_RQ_BUS_WIDTH),
     DEFINE_PORTVEC(io_data_bo, SYS_RQ_BUS_WIDTH),
     DEFINE_PORT(io_wr_o),
-    DEFINE_PORT(io_rd_o)
+    DEFINE_PORT(io_rd_o),
+    should_stop(false),
+    image_count(_image_count)
 {
-    should_stop = false;
-    image_count = _image_count;
     strncpy(weights_path, _weights_path, PATH_MAX);
     for (size_t i = 0; i < image_count; ++i)
         strncpy(image_paths[i], _image_paths[i], PATH_MAX);

@@ -3,16 +3,12 @@
 
 #include "systemc.h"
 #include "sysreqs.h"
+#include "helpers.h"
 
 SC_MODULE(Mem)
 {
-
     sc_in<bool>  mem_clk_i;
-    sc_in<sc_uint<SYS_RQ_MEMADDR_WIDTH>> mem_addr_bi;
-    sc_vector<sc_in<double>>  mem_data_bi;
-    sc_vector<sc_out<double>> mem_data_bo;
-    sc_in<bool> mem_wr_i;
-    sc_in<bool> mem_rd_i;
+    DECLARE_MEM_PORTS(mem, double, SYS_RQ_MEMADDR_WIDTH);
 
     SC_HAS_PROCESS(Mem);
 
