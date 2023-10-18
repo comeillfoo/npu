@@ -3,8 +3,8 @@
 LocalMemDual::LocalMemDual(sc_module_name nm) :
     sc_module(nm),
     DEFINE_PORT(lmd_clk_i),
-    DEFINE_MEM_PORTS(lmd_0, SYS_RQ_BUS_WIDTH),
-    DEFINE_MEM_PORTS(lmd_1, SYS_RQ_BUS_WIDTH)
+    DEFINE_MEM_PORTS(lmd_0, CONFIG_BUS_WIDTH),
+    DEFINE_MEM_PORTS(lmd_1, CONFIG_BUS_WIDTH)
 {
     for (size_t i = 0; i < lmd_0_data_bo.size(); ++i)
         lmd_0_data_bo[i].initialize(0.0);
@@ -29,11 +29,11 @@ size_t LocalMemDual::row(size_t addr)
 }
 
 void LocalMemDual::port_read(
-    sc_in<sc_uint<SYS_RQ_LOCAL_MEMADDR_WIDTH>> &addr_bi,
+    sc_in<sc_uint<CONFIG_LOCAL_MEMADDR_WIDTH>> &addr_bi,
     sc_vector<sc_in<double>> &data_bi)
 {
     const size_t r = row(addr_bi.read());
-    for (size_t c = 0; c < SYS_RQ_MEMORY_COLS; ++c)
+    for (size_t c = 0; c < CONFIG_MEMORY_COLS; ++c)
         mem[r][c] = data_bi[c].read();
 }
 
@@ -47,11 +47,11 @@ void LocalMemDual::bus_read()
 }
 
 void LocalMemDual::port_write(
-    sc_in<sc_uint<SYS_RQ_LOCAL_MEMADDR_WIDTH>> &addr_bi,
+    sc_in<sc_uint<CONFIG_LOCAL_MEMADDR_WIDTH>> &addr_bi,
     sc_vector<sc_out<double>> &data_bo)
 {
     const size_t r = row(addr_bi.read());
-    for (size_t c = 0; c < SYS_RQ_MEMORY_COLS; ++c)
+    for (size_t c = 0; c < CONFIG_MEMORY_COLS; ++c)
         data_bo[c].write(mem[r][c]);
 }
 

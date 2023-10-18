@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include "io.h"
 #include "helpers.h"
 
@@ -12,8 +13,8 @@ Io::Io(sc_module_name nm,
     DEFINE_PORT(io_brq_o),
     DEFINE_PORT(io_bgt_i),
     DEFINE_PORT(io_addr_bo),
-    DEFINE_PORTVEC(io_data_bi, SYS_RQ_BUS_WIDTH),
-    DEFINE_PORTVEC(io_data_bo, SYS_RQ_BUS_WIDTH),
+    DEFINE_PORTVEC(io_data_bi, CONFIG_BUS_WIDTH),
+    DEFINE_PORTVEC(io_data_bo, CONFIG_BUS_WIDTH),
     DEFINE_PORT(io_wr_o),
     DEFINE_PORT(io_rd_o),
     should_stop(false),
@@ -30,7 +31,7 @@ Io::Io(sc_module_name nm,
     for (size_t i = 0; i < io_data_bo.size(); ++i)
         io_data_bo[i].initialize(0);
 
-    state = IOS_STORE_WEIGHTS;
+    state = IOS_MEMTEST; // IOS_STORE_WEIGHTS
 
     SC_CTHREAD(io_routine, io_clk_i.pos());
 }
@@ -51,7 +52,7 @@ void Io::bus_release()
     while (io_bgt_i.read()) wait();
 }
 
-void Io::bus_write(size_t memory_row, double data[SYS_RQ_BUS_WIDTH])
+void Io::bus_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
 {
     bus_capture();
 
@@ -65,7 +66,7 @@ void Io::bus_write(size_t memory_row, double data[SYS_RQ_BUS_WIDTH])
     bus_release();
 }
 
-void Io::bus_read(size_t memory_row, double data[SYS_RQ_BUS_WIDTH])
+void Io::bus_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
 {
     bus_capture();
 
@@ -93,18 +94,18 @@ void Io::store_weights()
         return;
     }
 
-    const size_t count = SYS_RQ_LAYER_COUNT * SYS_RQ_MAX_IMAGE_SIZE;
+    const size_t count = CONFIG_LAYER_COUNT * CONFIG_MAX_IMAGE_SIZE;
     for (size_t i = 0; i < count; ++i) {
-        double weights_per_input[SYS_RQ_MAX_IMAGE_SIZE] = {0.0};
+        double weights_per_input[CONFIG_MAX_IMAGE_SIZE] = {0.0};
 
         size_t n = fread(weights_per_input, sizeof(double),
             (sizeof(weights_per_input) / sizeof(double)), fweights);
 
-        if (n < SYS_RQ_MAX_IMAGE_SIZE) {
+        if (n < CONFIG_MAX_IMAGE_SIZE) {
             state = IOS_ERROR;
             goto err;
         }
-        bus_write(i + SYS_RQ_LAYER_COUNT, weights_per_input);
+        bus_write(i + CONFIG_LAYER_COUNT, weights_per_input);
     }
 
     state = IOS_STORE_IMAGE;
@@ -127,10 +128,10 @@ void Io::store_image()
         return;
     }
 
-    double image[SYS_RQ_MAX_IMAGE_SIZE] = {0.0};
+    double image[CONFIG_MAX_IMAGE_SIZE] = {0.0};
     size_t n = fread(image, sizeof(double),
         (sizeof(image) / sizeof(double)), fimage);
-    if (n < SYS_RQ_MAX_IMAGE_SIZE) {
+    if (n < CONFIG_MAX_IMAGE_SIZE) {
         state = IOS_ERROR;
         goto err;
     }
@@ -143,14 +144,37 @@ err:
 
 void Io::load_result()
 {
-    for (size_t layer = 1; layer < SYS_RQ_LAYER_COUNT; ++layer) {
-        double output[SYS_RQ_BUS_WIDTH] = {0.0};
+    for (size_t layer = 1; layer < CONFIG_LAYER_COUNT; ++layer) {
+        double output[CONFIG_BUS_WIDTH] = {0.0};
         bus_read(layer, output);
         std::cout << "y[" << layer << "]: {";
-        for (size_t i = 0; i < SYS_RQ_BUS_WIDTH; ++i)
+        for (size_t i = 0; i < CONFIG_BUS_WIDTH; ++i)
             std::cout << output[i] << ", ";
         std::cout << "}" << std::endl;
     }
+}
+
+bool Io::memtest()
+{
+    std::uniform_real_distribution<double> unif(0, 1);
+    std::default_random_engine re;
+    double a[CONFIG_MEMORY_ROWS][CONFIG_MEMORY_COLS];
+    // write to the memory
+    for (size_t i = 0; i < CONFIG_MEMORY_ROWS; ++i) {
+        for (size_t j = 0; j < CONFIG_MEMORY_COLS; ++j)
+            a[i][j] = unif(re);
+        bus_write(i, a[i]);
+    }
+
+    // read from the memory
+    double b[CONFIG_MEMORY_COLS] = {0.0};
+    for (size_t i = 0; i < CONFIG_MEMORY_ROWS; ++i) {
+        bus_read(i, b);
+        for (size_t j = 0; j < CONFIG_MEMORY_COLS; ++j)
+            if (b[j] != a[i][j])
+                return false;
+    }
+    return true;
 }
 
 void Io::io_routine()
@@ -165,6 +189,10 @@ void Io::io_routine()
                 break;
             case IOS_LOAD_RESULT:
                 load_result(); break;
+            case IOS_MEMTEST:
+                std::cout << "Memtest: "
+                    << (memtest()? "SUCCEED" : "FAILED")
+                    << std::endl;
             case IOS_ERROR:
             default:
                 should_stop = true;

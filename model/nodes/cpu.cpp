@@ -1,6 +1,6 @@
 #include <cmath>
 #include "cpu.h"
-#include "sysreqs.h"
+#include "config.h"
 #include "helpers.h"
 
 
@@ -14,7 +14,7 @@ CPU::CPU(sc_module_name nm, size_t _shiftout) :
     sc_module(nm),
     DEFINE_PORT(cpu_clk_i),
     DEFINE_PORT(cpu_rst_i),
-    DEFINE_MEM_MASTER_PORTS(cpu, SYS_RQ_BUS_WIDTH),
+    DEFINE_MEM_MASTER_PORTS(cpu, CONFIG_BUS_WIDTH),
     DEFINE_PORT(cpu_ready_o),
     shiftout(_shiftout),
     weights{{0.0}},
@@ -37,7 +37,7 @@ CPU::~CPU()
 {
 }
 
-void CPU::bus_write(size_t memory_row, double data[SYS_RQ_BUS_WIDTH])
+void CPU::bus_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
 {
     for (size_t i = 0; i < cpu_data_bo.size(); ++i)
         cpu_data_bo[i].write(data[i]);
@@ -48,7 +48,7 @@ void CPU::bus_write(size_t memory_row, double data[SYS_RQ_BUS_WIDTH])
     cpu_wr_o.write(false);
 }
 
-void CPU::bus_read(size_t memory_row, double data[SYS_RQ_BUS_WIDTH])
+void CPU::bus_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
 {
     cpu_addr_bo.write(memory_row << 9);
 
@@ -61,7 +61,12 @@ void CPU::bus_read(size_t memory_row, double data[SYS_RQ_BUS_WIDTH])
         data[i] = cpu_data_bi[i].read();
 }
 
+size_t CPU::lea(size_t addr)
+{
+    return addr + shiftout;
+}
 
+// TODO: add while loop 'cause of cthread
 void CPU::cpu_routine()
 {
     if (!cpu_rst_i.read()) {
@@ -73,15 +78,15 @@ void CPU::cpu_routine()
 
         // calculate partial products
         for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i)
-            for (size_t j = 0; j < SYS_RQ_BUS_WIDTH; ++j)
+            for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
                 partial_products[i][j] = weights[i][j] * previous_output[j];
 
         // calculate output
         for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i) {
             sum[i] = 0.0;
-            for (size_t j = 0; j < SYS_RQ_BUS_WIDTH; ++j)
+            for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
                 sum[i] += partial_products[i][j];
-            output[i + shiftout] = sigmoid(sum[i]);
+            output[lea(i)] = sigmoid(sum[i]);
         }
 
         // store output

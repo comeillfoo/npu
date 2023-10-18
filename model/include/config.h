@@ -1,0 +1,19 @@
+#ifndef _CONFIG_H_
+#define _CONFIG_H_
+
+#define CONFIG_MAX_IMAGES            (30ULL)
+
+#define CONFIG_MAX_IMAGE_SIZE        (64ULL)
+#define CONFIG_MAX_WEIGHTS_PER_LAYER (64ULL)
+#define CONFIG_LAYER_COUNT           (32ULL)
+
+#define CONFIG_BUS_WIDTH             CONFIG_MAX_IMAGE_SIZE
+
+#define CONFIG_MEMADDR_WIDTH         (21ULL)
+#define CONFIG_MEMORY_COLS           CONFIG_BUS_WIDTH
+#define CONFIG_MEMORY_ROWS           (CONFIG_LAYER_COUNT * (CONFIG_MAX_IMAGE_SIZE + 1))
+
+#define CONFIG_LOCAL_MEMADDR_WIDTH   (14ULL)
+#define CONFIG_LOCAL_MEM_ROWS        (18ULL)
+
+#endif // _CONFIG_H_

@@ -6,7 +6,7 @@ int sc_main(int argc, char* argv[])
 {
     // provide weights and images from paths
     size_t images = argc - 2;
-    if (argc < 3 || images > SYS_RQ_MAX_IMAGES) {
+    if (argc < 3 || images > CONFIG_MAX_IMAGES) {
         return(1);
     }
 
@@ -14,7 +14,7 @@ int sc_main(int argc, char* argv[])
 
     Mem memory("memory");
     // bus <-> memory signals
-    sc_signal<sc_uint<SYS_RQ_MEMADDR_WIDTH>> bus_addr;
+    sc_signal<sc_uint<CONFIG_MEMADDR_WIDTH>> bus_addr;
     sc_vector<sc_signal<double>> bus_data_bi, bus_data_bo;
     sc_signal<bool> bus_wr, bus_rd;
 
@@ -28,7 +28,7 @@ int sc_main(int argc, char* argv[])
     Io io("io", argv[1], argv + 2, argc - 2);
     // bus <-> io signals
     sc_signal<bool> io_brq, io_bgt;
-    sc_signal<sc_uint<SYS_RQ_MEMADDR_WIDTH>> io_addr;
+    sc_signal<sc_uint<CONFIG_MEMADDR_WIDTH>> io_addr;
     sc_vector<sc_signal<double>> io_data_bi, io_data_bo;
     sc_signal<bool> io_wr, io_rd;
 
