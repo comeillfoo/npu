@@ -50,7 +50,7 @@ static const char* class_names[] = {
 
 
 static size_t neurons_count[MAX_LAYERS] = {0};
-static double weights[MAX_LAYERS][MAX_NEURALS_PER_LAYER][MAX_NEURALS_PER_LAYER] = {0};
+static double weights[MAX_LAYERS][MAX_NEURALS_PER_LAYER][MAX_NEURALS_PER_LAYER] = {{{0.0}}};
 
 static const char* param_names[] = {
     [NP_ACCURACY_LIMIT] = "ACCURACY_LIMIT",
@@ -388,5 +388,33 @@ int main(int argc, char** argv)
     printf(" ], expected %s\n", class_names[dataset[idx].target]);
     save_image(dataset[idx], in_layer_size, "./miss.bin");
 
-    return 0;
+    // save the weights for SystemC model
+    int ret = 0;
+    const char* weights_p = "weights.bin";
+    FILE* weights_f = fopen(weights_p, "wb");
+    if (!weights_f) {
+        int err = errno;
+        perror("Cannot save tuned weights");
+        return err;
+    }
+
+    for (size_t k = 0; k < MAX_LAYERS_OUT; ++k)
+        for (size_t i = 0; i < MAX_NEURALS_PER_LAYER_OUT; ++i) {
+            double out_weights[MAX_NEURALS_PER_LAYER_OUT] = {0.0};
+            if (k < MAX_LAYERS && i < MAX_NEURALS_PER_LAYER)
+                memcpy(out_weights, weights[k][i], sizeof(double) * MAX_NEURALS_PER_LAYER);
+            size_t n = fwrite(out_weights, sizeof(double), MAX_NEURALS_PER_LAYER_OUT, weights_f);
+            if (MAX_NEURALS_PER_LAYER_OUT > n) {
+                ret = errno;
+                perror("Cannot save weights");
+                goto W_fclose;
+            }
+        }
+W_fclose:
+    if (fclose(weights_f)) {
+        ret = errno;
+        perror("Cannot close file with tuned weights");
+    } else printf("Successfuly saved weights to '%s'\n", weights_p);
+
+    return ret;
 }

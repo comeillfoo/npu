@@ -7,6 +7,9 @@
 #define MAX_LAYERS 20
 #define MAX_NEURALS_PER_LAYER 20
 
+#define MAX_LAYERS_OUT 32
+#define MAX_NEURALS_PER_LAYER_OUT 64
+
 double sigmoid(double x);
 
 double activate(
