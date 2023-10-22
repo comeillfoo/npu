@@ -4,7 +4,7 @@ LD=g++
 SC_PKGCONFIG=../.venv/lib/pkgconfig
 INCLUDE_DIRS=-Iinclude
 BUILD_DIR=build
-NODES=$(addprefix nodes/,mem.cpp bus.cpp io.cpp cpu.cpp dma.cpp)
+NODES=$(addprefix nodes/,mem.cpp bus.cpp io.cpp cpu.cpp dma.cpp local_mem_dual.cpp)
 BUILD_NODES=$(addprefix $(BUILD_DIR)/, $(NODES:.cpp=.o))
 
 

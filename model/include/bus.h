@@ -17,10 +17,10 @@
 enum bus_states {
     BS_IDLE = 0,
     BS_BUSY_IO,
+    BS_BUSY_DMA0,
     BS_BUSY_DMA1,
     BS_BUSY_DMA2,
-    BS_BUSY_DMA3,
-    BS_BUSY_DMA4
+    BS_BUSY_DMA3
 };
 
 
@@ -28,10 +28,10 @@ SC_MODULE(Bus)
 {
     sc_in<bool> bus_clk_i;
     DECLARE_DEVICE_PORTS(io);
+    DECLARE_DEVICE_PORTS(dma0);
     DECLARE_DEVICE_PORTS(dma1);
     DECLARE_DEVICE_PORTS(dma2);
     DECLARE_DEVICE_PORTS(dma3);
-    DECLARE_DEVICE_PORTS(dma4);
     sc_out<sc_uint<CONFIG_MEMADDR_WIDTH>> bus_addr_bo;
     sc_vector<sc_in<double>> bus_data_bi;
     sc_vector<sc_out<double>> bus_data_bo;

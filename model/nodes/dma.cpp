@@ -7,20 +7,22 @@ DMA::DMA(sc_module_name nm,
     size_t _shift) :
     sc_module(nm),
     DEFINE_PORT(dma_clk_i),
-    DEFINE_PORT(dma_bgt_i),
+    DEFINE_PORT(dma_rst_i),
+    DEFINE_PORT(dma_shmem_bgt_i),
     DEFINE_PORT(dma_valid_i),
     DEFINE_PORT(dma_cpu_ready_i),
     DEFINE_MEM_MASTER_PORTS(dma_lcmem, CONFIG_BUS_WIDTH),
     DEFINE_MEM_MASTER_PORTS(dma_shmem, CONFIG_BUS_WIDTH),
     DEFINE_PORT(dma_ready_o),
-    DEFINE_PORT(dma_brq_o),
+    DEFINE_PORT(dma_shmem_brq_o),
     DEFINE_PORT(dma_cpu_rst_o),
-    buffer{0.0},
+    buf{0.0},
+    buf1{0.0},
     layer(1),
     shift(_shift)
 {
     dma_cpu_rst_o.initialize(true);
-    dma_brq_o.initialize(false);
+    dma_shmem_brq_o.initialize(false);
     dma_ready_o.initialize(false);
     dma_lcmem_rd_o.initialize(false);
     dma_lcmem_wr_o.initialize(false);
@@ -43,14 +45,14 @@ DMA::~DMA()
 
 void DMA::shmem_capture()
 {
-    dma_brq_o.write(true);
-    while (!dma_bgt_i.read()) wait();
+    dma_shmem_brq_o.write(true);
+    while (!dma_shmem_bgt_i.read()) wait();
 }
 
 void DMA::shmem_release()
 {
-    dma_brq_o.write(false);
-    while (dma_bgt_i.read()) wait();
+    dma_shmem_brq_o.write(false);
+    while (dma_shmem_bgt_i.read()) wait();
 }
 
 void DMA::lcmem_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
@@ -116,23 +118,58 @@ size_t DMA::lea(size_t addr)
 // TODO: add while loop 'cause of cthread
 void DMA::dma_routine()
 {
-    if (dma_valid_i.read()) {
-        dma_cpu_rst_o.write(true); // reset linked cpu
-        dma_ready_o.write(false); // reset read
+    while (true) {
+        if (!dma_rst_i.read() && dma_valid_i.read()) {
+            dma_cpu_rst_o.write(true); // reset linked cpu
+            dma_ready_o.write(false); // reset ready flag
 
-        shmem_read(layer - 1, buffer); // read previous output from shared memory
-        lcmem_write(0, buffer); // write to local memory
+            shmem_read(layer - 1, buf); // read previous output from shared memory
+            lcmem_write(0, buf); // write to local memory
 
-        for (size_t i = 0; i < DMA_WEIGHTS_ROWS; ++i) {
-            shmem_read(lea(i), buffer); // read layer weights
-            lcmem_write(2 + i, buffer); // store layer weights
+            for (size_t i = 0; i < DMA_WEIGHTS_ROWS; ++i) {
+                shmem_read(lea(i), buf); // read layer weights
+                lcmem_write(2 + i, buf); // store layer weights
+            }
+
+            dma_cpu_rst_o.write(false); // start cpu
+            while (!dma_cpu_ready_i.read()) wait(); // wait for end of calculations
+            dma_cpu_rst_o.write(true); // stop cpu
+
+            // merge previous output with the calculated
+            shmem_read(layer, buf);
+            lcmem_read(1, buf1);
+            for (size_t i = 0; i < CONFIG_BUS_WIDTH; ++i)
+                buf[i] += buf1[i];
+            shmem_write(layer, buf);
+            dma_ready_o.write(true); // notify next block in chain
+            wait();
         }
 
-        dma_cpu_rst_o.write(false); // start cpu
-        while (!dma_cpu_ready_i.read()) wait(); // wait for end of calculations
-        // merge previous output with the calculated
+        // no reset and no valid data
+        if (!dma_rst_i.read() && !dma_valid_i.read()) wait();
 
-        // store merged output
+        // reset
+        if (dma_rst_i.read()) {
+            layer = 1;
+            for (size_t i = 0; i < CONFIG_BUS_WIDTH; ++i) {
+                buf[i] = 0.0;
+                buf1[i] = 0.0;
+            }
+            dma_cpu_rst_o.write(true);
+            dma_shmem_brq_o.write(false);
+            dma_ready_o.write(false);
+            dma_lcmem_rd_o.write(false);
+            dma_lcmem_wr_o.write(false);
+            dma_lcmem_addr_bo.write(0);
+            for (size_t i = 0; i < dma_lcmem_data_bo.size(); ++i)
+                dma_lcmem_data_bo[i].write(0.0);
+
+            dma_shmem_rd_o.write(false);
+            dma_shmem_wr_o.write(false);
+            dma_shmem_addr_bo.write(0);
+            for (size_t i = 0; i < dma_shmem_data_bo.size(); ++i)
+                dma_shmem_data_bo[i].write(0.0);
+        }
     }
 }
 

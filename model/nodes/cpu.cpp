@@ -69,35 +69,43 @@ size_t CPU::lea(size_t addr)
 // TODO: add while loop 'cause of cthread
 void CPU::cpu_routine()
 {
-    if (!cpu_rst_i.read()) {
-        // read previous outputs
-        bus_read(0, previous_output);
-        // read weights
-        for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i)
-            bus_read((i + 2) << 9, weights[i]);
+    while (true) {
+        if (!cpu_rst_i.read()) {
+            cpu_ready_o.write(false);
+            // read previous outputs
+            bus_read(0, previous_output);
+            // read weights
+            for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i)
+                bus_read((i + 2) << 9, weights[i]);
 
-        // calculate partial products
-        for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i)
-            for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
-                partial_products[i][j] = weights[i][j] * previous_output[j];
+            // calculate partial products
+            for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i)
+                for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
+                    partial_products[i][j] = weights[i][j] * previous_output[j];
 
-        // calculate output
-        for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i) {
-            sum[i] = 0.0;
-            for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
-                sum[i] += partial_products[i][j];
-            output[lea(i)] = sigmoid(sum[i]);
+            // calculate output
+            for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i) {
+                sum[i] = 0.0;
+                for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
+                    sum[i] += partial_products[i][j];
+                output[lea(i)] = sigmoid(sum[i]);
+            }
+
+            // store output
+            bus_write(1 << 9, output);
+            cpu_ready_o.write(true);
+            wait();
         }
 
-        // store output
-        bus_write(1 << 9, output);
-        return;
+        // reset
+        if (cpu_rst_i.read()) {
+            // zero outputs
+            cpu_ready_o.write(false);
+            cpu_rd_o.write(false);
+            cpu_wr_o.write(false);
+            cpu_addr_bo.write(0);
+            for (size_t i = 0; i < cpu_data_bo.size(); ++i)
+                cpu_data_bo[i].write(0.0);
+        }
     }
-    // zero outputs
-    cpu_ready_o.write(false);
-    cpu_rd_o.write(false);
-    cpu_wr_o.write(false);
-    cpu_addr_bo.write(0);
-    for (size_t i = 0; i < cpu_data_bo.size(); ++i)
-        cpu_data_bo[i].write(0.0);
 }

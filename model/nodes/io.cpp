@@ -10,8 +10,11 @@ Io::Io(sc_module_name nm,
     size_t _image_count) :
     sc_module(nm),
     DEFINE_PORT(io_clk_i),
+    DEFINE_PORT(io_rst_o),
     DEFINE_PORT(io_brq_o),
     DEFINE_PORT(io_bgt_i),
+    DEFINE_PORT(io_valid_i),
+    DEFINE_PORT(io_ready_o),
     DEFINE_PORT(io_addr_bo),
     DEFINE_PORTVEC(io_data_bi, CONFIG_BUS_WIDTH),
     DEFINE_PORTVEC(io_data_bo, CONFIG_BUS_WIDTH),
@@ -24,14 +27,16 @@ Io::Io(sc_module_name nm,
     for (size_t i = 0; i < image_count; ++i)
         strncpy(image_paths[i], _image_paths[i], PATH_MAX);
 
+    io_rst_o.initialize(true);
+    io_ready_o.initialize(false);
+    io_brq_o.initialize(false);
     io_wr_o.initialize(false);
     io_rd_o.initialize(false);
     io_addr_bo.initialize(0);
-    io_brq_o.initialize(false);
     for (size_t i = 0; i < io_data_bo.size(); ++i)
         io_data_bo[i].initialize(0);
 
-    state = IOS_MEMTEST; // IOS_STORE_WEIGHTS
+    state = IOS_STORE_WEIGHTS; // IOS_STORE_WEIGHTS
 
     SC_CTHREAD(io_routine, io_clk_i.pos());
 }
@@ -119,10 +124,10 @@ void Io::store_image()
         should_stop = true;
         return;
     }
-    size_t img = image_count - 1;
-    std::cout << "$ store_image " << image_paths[img];
+    --image_count;
+    std::cout << "$ store_image " << image_paths[image_count];
 
-    FILE* fimage = fopen(image_paths[img], "rb");
+    FILE* fimage = fopen(image_paths[image_count], "rb");
     if (!fimage) {
         state = IOS_ERROR;
         return;
@@ -142,9 +147,24 @@ err:
     fclose(fimage);
 }
 
+void Io::wait_result()
+{
+    io_rst_o.write(false);
+    for (size_t layer = 1; layer < CONFIG_LAYER_COUNT; ++layer) {
+        std::cout << "$ wait_result " << layer << " STARTED" << std::endl;
+        io_ready_o.write(true);
+        wait();
+        io_ready_o.write(false);
+        while (!io_valid_i.read()) wait();
+        std::cout << "$ wait_result " << layer << " FINISHED" << std::endl;
+    }
+    io_rst_o.write(true);
+}
+
 void Io::load_result()
 {
-    for (size_t layer = 1; layer < CONFIG_LAYER_COUNT; ++layer) {
+    std::cout << "$ load_result" << std::endl;
+    for (size_t layer = 0; layer < CONFIG_LAYER_COUNT; ++layer) {
         double output[CONFIG_BUS_WIDTH] = {0.0};
         bus_read(layer, output);
         std::cout << "y[" << layer << "]: {";
@@ -152,6 +172,7 @@ void Io::load_result()
             std::cout << output[i] << ", ";
         std::cout << "}" << std::endl;
     }
+    state = IOS_STORE_IMAGE;
 }
 
 bool Io::memtest()
@@ -186,7 +207,7 @@ void Io::io_routine()
             case IOS_STORE_IMAGE:
                 store_image(); break;
             case IOS_WAIT_RESULT:
-                break;
+                wait_result(); break;
             case IOS_LOAD_RESULT:
                 load_result(); break;
             case IOS_MEMTEST:

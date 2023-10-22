@@ -18,8 +18,11 @@ enum io_states {
 SC_MODULE(Io)
 {
     sc_in<bool> io_clk_i;
+    sc_out<bool> io_rst_o;
     sc_out<bool> io_brq_o;
     sc_in<bool> io_bgt_i;
+    sc_in<bool> io_valid_i;
+    sc_out<bool> io_ready_o;
     sc_out<sc_uint<CONFIG_MEMADDR_WIDTH>> io_addr_bo;
     sc_vector<sc_in<double>> io_data_bi;
     sc_vector<sc_out<double>> io_data_bo;
@@ -52,6 +55,7 @@ private:
     void store_weights();
     void store_image();
     void load_result();
+    void wait_result();
     bool memtest();
 };
 

@@ -1,4 +1,7 @@
 #include "io.h"
+#include "cpu.h"
+#include "dma.h"
+#include "local_mem_dual.h"
 #include "mem.h"
 #include "bus.h"
 
@@ -12,37 +15,11 @@ int sc_main(int argc, char* argv[])
 
     sc_clock clk("clk", sc_time(10, SC_NS));
 
-    Mem memory("memory");
+    Bus bus("bus");
     // bus <-> memory signals
     sc_signal<sc_uint<CONFIG_MEMADDR_WIDTH>> bus_addr;
     sc_vector<sc_signal<double>> bus_data_bi, bus_data_bo;
     sc_signal<bool> bus_wr, bus_rd;
-
-    memory.mem_clk_i(clk);
-    memory.mem_addr_bi(bus_addr);
-    memory.mem_data_bi(bus_data_bo);
-    memory.mem_data_bo(bus_data_bi);
-    memory.mem_wr_i(bus_wr);
-    memory.mem_rd_i(bus_rd);
-
-    Io io("io", argv[1], argv + 2, argc - 2);
-    // bus <-> io signals
-    sc_signal<bool> io_brq, io_bgt;
-    sc_signal<sc_uint<CONFIG_MEMADDR_WIDTH>> io_addr;
-    sc_vector<sc_signal<double>> io_data_bi, io_data_bo;
-    sc_signal<bool> io_wr, io_rd;
-
-    io.io_brq_o(io_brq);
-    io.io_bgt_i(io_bgt);
-    io.io_addr_bo(io_addr);
-    io.io_data_bi(io_data_bi);
-    io.io_data_bo(io_data_bo);
-    io.io_wr_o(io_wr);
-    io.io_rd_o(io_rd);
-
-    Bus bus("bus");
-
-    // connect mem
     bus.bus_clk_i(clk);
     bus.bus_addr_bo(bus_addr);
     bus.bus_data_bi(bus_data_bi);
@@ -50,22 +27,47 @@ int sc_main(int argc, char* argv[])
     bus.bus_wr_o(bus_wr);
     bus.bus_rd_o(bus_rd);
 
-    // connect io
-    bus.io_brq_i(io_brq);
-    bus.io_bgt_o(io_bgt);
-    bus.io_addr_bi(io_addr);
-    bus.io_data_bi(io_data_bo);
-    bus.io_data_bo(io_data_bi);
-    bus.io_wr_i(io_wr);
-    bus.io_rd_i(io_rd);
+    Io io("io", argv[1], argv + 2, argc - 2);
+    io.io_clk_i(clk);
+    sc_signal<bool> io_rst; io.io_rst_o(io_rst);
+    DECLARE_BUS_MATRIX_CLIENT_SIGNALS(io, io, io, double, CONFIG_MEMADDR_WIDTH); // bus <-> io signals
+    sc_signal<bool> io_ready; io.io_ready_o(io_ready);
+    PLUG_DEV_BUS_MATRIX(bus, io, io); // connect io to bus
 
-    sc_trace_file *wf = sc_create_vcd_trace_file("wave");
+    DECLARE_DMA_CPU_LMEM(0, double, CONFIG_MEMADDR_WIDTH, double, CONFIG_LOCAL_MEMADDR_WIDTH, clk);
+    dma0.dma_rst_i(io_rst);
+    PLUG_DEV_BUS_MATRIX(bus, dma0, dma0_shmem); // connect dma0 to bus
+
+    DECLARE_DMA_CPU_LMEM(1, double, CONFIG_MEMADDR_WIDTH, double, CONFIG_LOCAL_MEMADDR_WIDTH, clk);
+    dma1.dma_rst_i(io_rst);
+    PLUG_DEV_BUS_MATRIX(bus, dma1, dma1_shmem); // connect dma1 to bus
+
+    DECLARE_DMA_CPU_LMEM(2, double, CONFIG_MEMADDR_WIDTH, double, CONFIG_LOCAL_MEMADDR_WIDTH, clk);
+    dma2.dma_rst_i(io_rst);
+    PLUG_DEV_BUS_MATRIX(bus, dma2, dma2_shmem); // connect dma2 to bus
+
+    DECLARE_DMA_CPU_LMEM(3, double, CONFIG_MEMADDR_WIDTH, double, CONFIG_LOCAL_MEMADDR_WIDTH, clk);
+    dma3.dma_rst_i(io_rst);
+    PLUG_DEV_BUS_MATRIX(bus, dma3, dma3_shmem); // connect dma3 to bus
+
+    // make valid/ready chain
+    dma0.dma_valid_i(io_ready);
+    dma1.dma_valid_i(dma0_ready);
+    dma2.dma_valid_i(dma1_ready);
+    dma3.dma_valid_i(dma2_ready);
+    io.io_valid_i(dma3_ready);
+
+    // connect mem to bus
+    Mem memory("memory");
+    memory.mem_clk_i(clk);
+    memory.mem_addr_bi(bus_addr);
+    memory.mem_data_bi(bus_data_bo);
+    memory.mem_data_bo(bus_data_bi);
+    memory.mem_wr_i(bus_wr);
+    memory.mem_rd_i(bus_rd);
+
+    sc_trace_file* wf = sc_create_vcd_trace_file("wave");
     sc_trace(wf, clk, "clk");
-    sc_trace(wf, bus_addr, "bus_addr");
-    // sc_trace(wf, bus_data_bi, "bus_data_bi");
-    // sc_trace(wf, bus_data_bo, "bus_data_bo");
-    sc_trace(wf, bus_wr, "bus_wr");
-    sc_trace(wf, bus_rd, "bus_rd");
 
     sc_start();
 
