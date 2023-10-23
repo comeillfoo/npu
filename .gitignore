@@ -4,6 +4,8 @@ __pycache__
 build
 massif.out.*
 npu
+pad0
+*.log
 !.gitignore
 !data/**/*.bin
 !model/.gitignore
