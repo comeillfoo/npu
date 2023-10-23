@@ -188,7 +188,9 @@ static void foreach_weights(size_t input_length, consume_action action)
             size_t previous_layer_length = k == 0? input_length : neurons_count[k - 1];
             for (size_t j = 0; j < previous_layer_length; ++j)
                 action(weights[k][i][j]);
+            if (action == print_weight) printf("\n");
         }
+        if (action == print_weight) printf("\n");
         k++;
     }
 }
