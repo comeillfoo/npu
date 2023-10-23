@@ -106,6 +106,7 @@ void CPU::cpu_routine()
             cpu_addr_bo.write(0);
             for (size_t i = 0; i < cpu_data_bo.size(); ++i)
                 cpu_data_bo[i].write(0.0);
+            wait();
         }
     }
 }

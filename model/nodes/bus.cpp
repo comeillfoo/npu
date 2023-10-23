@@ -43,7 +43,7 @@ Bus::Bus(sc_module_name nm) :
 
     state = BS_IDLE;
 
-    SC_THREAD(bus_routine);
+    SC_CTHREAD(bus_routine, bus_clk_i.pos());
 }
 
 Bus::~Bus()
@@ -106,6 +106,7 @@ void Bus::bus_service(
 void Bus::bus_routine()
 {
     while (true) {
+        wait();
         switch (state) {
             case BS_IDLE: bus_arbiter(); break;
             case BS_BUSY_IO:   bus_service_device(io); break;

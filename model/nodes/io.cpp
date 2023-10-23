@@ -23,9 +23,11 @@ Io::Io(sc_module_name nm,
     should_stop(false),
     image_count(_image_count)
 {
+    std::cout << "IO: provided " << image_count << " images" << std::endl;
     strncpy(weights_path, _weights_path, PATH_MAX);
     for (size_t i = 0; i < image_count; ++i)
         strncpy(image_paths[i], _image_paths[i], PATH_MAX);
+    std::cout << "IO: internal fields initialized" << std::endl;
 
     io_rst_o.initialize(true);
     io_ready_o.initialize(false);
@@ -36,7 +38,7 @@ Io::Io(sc_module_name nm,
     for (size_t i = 0; i < io_data_bo.size(); ++i)
         io_data_bo[i].initialize(0);
 
-    state = IOS_STORE_WEIGHTS; // IOS_STORE_WEIGHTS
+    state = IOS_STORE_WEIGHTS;
 
     SC_CTHREAD(io_routine, io_clk_i.pos());
 }
@@ -68,6 +70,7 @@ void Io::bus_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     io_wr_o.write(true);
     wait();
     io_wr_o.write(false);
+    // wait();
     bus_release();
 }
 
@@ -113,6 +116,15 @@ void Io::store_weights()
         bus_write(i + CONFIG_LAYER_COUNT, weights_per_input);
     }
 
+    // for (size_t i = 0; i < count; ++i) {
+    //     std::cout << i << ":";
+    //     double weights_per_layer[CONFIG_MAX_IMAGE_SIZE] = {0.0};
+    //     bus_read(i + CONFIG_LAYER_COUNT, weights_per_layer);
+    //     for (size_t j = 0; j < CONFIG_MAX_IMAGE_SIZE; ++j)
+    //         std::cout << " " << weights_per_layer[j];
+    //     std::cout << std::endl;
+    // }
+
     state = IOS_STORE_IMAGE;
 err:
     fclose(fweights);
@@ -125,7 +137,7 @@ void Io::store_image()
         return;
     }
     --image_count;
-    std::cout << "$ store_image " << image_paths[image_count];
+    std::cout << "$ store_image " << image_paths[image_count] << std::endl;
 
     FILE* fimage = fopen(image_paths[image_count], "rb");
     if (!fimage) {
@@ -136,6 +148,8 @@ void Io::store_image()
     double image[CONFIG_MAX_IMAGE_SIZE] = {0.0};
     size_t n = fread(image, sizeof(double),
         (sizeof(image) / sizeof(double)), fimage);
+
+    // std::cout << "# image[0] = " << image[0] << std::endl;
     if (n < CONFIG_MAX_IMAGE_SIZE) {
         state = IOS_ERROR;
         goto err;
@@ -151,7 +165,7 @@ void Io::wait_result()
 {
     io_rst_o.write(false);
     for (size_t layer = 1; layer < CONFIG_LAYER_COUNT; ++layer) {
-        std::cout << "$ wait_result " << layer << " STARTED" << std::endl;
+        // std::cout << "$ wait_result " << layer << " STARTED" << std::endl;
         io_ready_o.write(true);
         wait();
         io_ready_o.write(false);
@@ -159,6 +173,8 @@ void Io::wait_result()
         std::cout << "$ wait_result " << layer << " FINISHED" << std::endl;
     }
     io_rst_o.write(true);
+
+    state = IOS_LOAD_RESULT;
 }
 
 void Io::load_result()
@@ -177,7 +193,8 @@ void Io::load_result()
 
 bool Io::memtest()
 {
-    std::uniform_real_distribution<double> unif(0, 1);
+    std::cout << "IO: memtest started" << std::endl;
+    std::uniform_real_distribution<double> unif(0.0, 1.0); // TODO: eliminate SIGSEGV
     std::default_random_engine re;
     double a[CONFIG_MEMORY_ROWS][CONFIG_MEMORY_COLS];
     // write to the memory
@@ -200,6 +217,7 @@ bool Io::memtest()
 
 void Io::io_routine()
 {
+    std::cout << "IO: connected" << std::endl;
     while (!should_stop) {
         switch (state) {
             case IOS_STORE_WEIGHTS:
@@ -220,5 +238,6 @@ void Io::io_routine()
                 break;
         }
     }
+    std::cout << "IO: disconnected" << std::endl;
     sc_stop();
 }

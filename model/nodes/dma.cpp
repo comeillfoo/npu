@@ -120,6 +120,7 @@ void DMA::dma_routine()
 {
     while (true) {
         if (!dma_rst_i.read() && dma_valid_i.read()) {
+            std::cout << name() << ": process layer: " << layer << std::endl;
             dma_cpu_rst_o.write(true); // reset linked cpu
             dma_ready_o.write(false); // reset ready flag
 
@@ -141,8 +142,10 @@ void DMA::dma_routine()
             for (size_t i = 0; i < CONFIG_BUS_WIDTH; ++i)
                 buf[i] += buf1[i];
             shmem_write(layer, buf);
+            layer = (layer + 1) % CONFIG_LAYER_COUNT;
             dma_ready_o.write(true); // notify next block in chain
             wait();
+            dma_ready_o.write(false);
         }
 
         // no reset and no valid data
@@ -169,6 +172,7 @@ void DMA::dma_routine()
             dma_shmem_addr_bo.write(0);
             for (size_t i = 0; i < dma_shmem_data_bo.size(); ++i)
                 dma_shmem_data_bo[i].write(0.0);
+            wait();
         }
     }
 }
