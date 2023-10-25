@@ -23,11 +23,11 @@ Io::Io(sc_module_name nm,
     should_stop(false),
     image_count(_image_count)
 {
-    std::cout << "IO: provided " << image_count << " images" << std::endl;
+    std::cout << name() << ": provided " << image_count << " images" << std::endl;
     strncpy(weights_path, _weights_path, PATH_MAX);
     for (size_t i = 0; i < image_count; ++i)
         strncpy(image_paths[i], _image_paths[i], PATH_MAX);
-    std::cout << "IO: internal fields initialized" << std::endl;
+    std::cout << name() << ": internal fields initialized" << std::endl;
 
     io_rst_o.initialize(true);
     io_ready_o.initialize(false);
@@ -66,12 +66,12 @@ void Io::bus_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     for (size_t i = 0; i < io_data_bo.size(); ++i)
         io_data_bo[i].write(data[i]);
     io_addr_bo.write(memory_row << 9);
-    // std::cout << "IO: write to " << io_addr_bo.read() << std::endl;
+    wait();
+    // std::cout << name() << ": write to " << io_addr_bo.read() << std::endl;
 
     io_wr_o.write(true);
     wait();
     io_wr_o.write(false);
-    // wait();
     bus_release();
 }
 
@@ -80,16 +80,17 @@ void Io::bus_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     bus_capture();
 
     io_addr_bo.write(memory_row << 9);
-
+    wait();
     io_rd_o.write(true);
-    wait();
-    io_rd_o.write(false);
-    wait();
+    wait(); wait(); wait(); wait();
 
+    // std::cout << name() << ": read: { ";
     for (size_t i = 0; i < io_data_bi.size(); ++i) {
         data[i] = io_data_bi[i].read();
+        // std::cout << data[i] << " ";
     }
-    // std::cout << name() << ": bus_read; data[0] = " << data[0] << std::endl;
+    // std::cout << "}" << std::endl;
+    io_rd_o.write(false);
 
     bus_release();
 }

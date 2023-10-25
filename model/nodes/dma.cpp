@@ -97,14 +97,13 @@ void DMA::shmem_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
 {
     shmem_capture();
     dma_shmem_addr_bo.write(memory_row << 9);
-
+    wait();
     dma_shmem_rd_o.write(true);
-    wait();
-    dma_shmem_rd_o.write(false);
-    wait();
+    wait(); wait(); wait(); wait();
 
     for (size_t i = 0; i < dma_shmem_data_bi.size(); ++i)
         data[i] = dma_shmem_data_bi[i].read();
+    dma_shmem_rd_o.write(false);
     shmem_release();
 }
 

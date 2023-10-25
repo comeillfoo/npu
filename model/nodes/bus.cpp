@@ -43,7 +43,8 @@ Bus::Bus(sc_module_name nm) :
 
     state = BS_IDLE;
 
-    SC_CTHREAD(bus_routine, bus_clk_i.pos());
+    SC_METHOD(bus_routine);
+    sensitive << bus_clk_i.pos();
 }
 
 Bus::~Bus()
@@ -73,7 +74,6 @@ void Bus::bus_arbiter()
         state = BS_BUSY_DMA3;
         // std::cout << name() << ": dma3 granted" << std::endl;
     }
-    wait();
 }
 
 void Bus::bus_service(
@@ -111,16 +111,14 @@ void Bus::bus_service(
 
 void Bus::bus_routine()
 {
-    while (true) {
-        switch (state) {
-            case BS_IDLE: bus_arbiter(); break;
-            case BS_BUSY_IO:   bus_service_device(io); break;
-            case BS_BUSY_DMA0: bus_service_device(dma0); break;
-            case BS_BUSY_DMA1: bus_service_device(dma1); break;
-            case BS_BUSY_DMA2: bus_service_device(dma2); break;
-            case BS_BUSY_DMA3: bus_service_device(dma3); break;
-            default: break;
-        }
+    switch (state) {
+        case BS_IDLE: bus_arbiter(); break;
+        case BS_BUSY_IO:   bus_service_device(io); break;
+        case BS_BUSY_DMA0: bus_service_device(dma0); break;
+        case BS_BUSY_DMA1: bus_service_device(dma1); break;
+        case BS_BUSY_DMA2: bus_service_device(dma2); break;
+        case BS_BUSY_DMA3: bus_service_device(dma3); break;
+        default: break;
     }
 }
 
