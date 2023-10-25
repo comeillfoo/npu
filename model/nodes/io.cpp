@@ -66,6 +66,7 @@ void Io::bus_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     for (size_t i = 0; i < io_data_bo.size(); ++i)
         io_data_bo[i].write(data[i]);
     io_addr_bo.write(memory_row << 9);
+    // std::cout << "IO: write to " << io_addr_bo.read() << std::endl;
 
     io_wr_o.write(true);
     wait();
@@ -85,8 +86,10 @@ void Io::bus_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     io_rd_o.write(false);
     wait();
 
-    for (size_t i = 0; i < io_data_bi.size(); ++i)
+    for (size_t i = 0; i < io_data_bi.size(); ++i) {
         data[i] = io_data_bi[i].read();
+    }
+    // std::cout << name() << ": bus_read; data[0] = " << data[0] << std::endl;
 
     bus_release();
 }
@@ -115,15 +118,6 @@ void Io::store_weights()
         }
         bus_write(i + CONFIG_LAYER_COUNT, weights_per_input);
     }
-
-    // for (size_t i = 0; i < count; ++i) {
-    //     std::cout << i << ":";
-    //     double weights_per_layer[CONFIG_MAX_IMAGE_SIZE] = {0.0};
-    //     bus_read(i + CONFIG_LAYER_COUNT, weights_per_layer);
-    //     for (size_t j = 0; j < CONFIG_MAX_IMAGE_SIZE; ++j)
-    //         std::cout << " " << weights_per_layer[j];
-    //     std::cout << std::endl;
-    // }
 
     state = IOS_STORE_IMAGE;
 err:
@@ -188,31 +182,32 @@ void Io::load_result()
             std::cout << output[i] << ", ";
         std::cout << "}" << std::endl;
     }
+
     state = IOS_STORE_IMAGE;
 }
 
-bool Io::memtest()
+void Io::memtest()
 {
-    std::cout << "IO: memtest started" << std::endl;
-    std::uniform_real_distribution<double> unif(0.0, 1.0); // TODO: eliminate SIGSEGV
-    std::default_random_engine re;
-    double a[CONFIG_MEMORY_ROWS][CONFIG_MEMORY_COLS];
+    double a[(CONFIG_MEMORY_ROWS >> 4)][CONFIG_MEMORY_COLS] = {{0.0}};
     // write to the memory
-    for (size_t i = 0; i < CONFIG_MEMORY_ROWS; ++i) {
+    for (size_t i = 0; i < (CONFIG_MEMORY_ROWS >> 4); ++i) {
         for (size_t j = 0; j < CONFIG_MEMORY_COLS; ++j)
-            a[i][j] = unif(re);
+            a[i][j] = i + j;
         bus_write(i, a[i]);
     }
 
-    // read from the memory
+    std::cout << "IO: memtest: ";
     double b[CONFIG_MEMORY_COLS] = {0.0};
-    for (size_t i = 0; i < CONFIG_MEMORY_ROWS; ++i) {
+    // read from the memory
+    for (size_t i = 0; i < (CONFIG_MEMORY_ROWS >> 4); ++i) {
         bus_read(i, b);
         for (size_t j = 0; j < CONFIG_MEMORY_COLS; ++j)
-            if (b[j] != a[i][j])
-                return false;
+            if (b[j] != a[i][j]) {
+                std::cout << "FAILED: expected " << a[i][j] << ", found " << b[j] << std::endl;
+                return;
+            }
     }
-    return true;
+    std::cout << "SUCCEED" << std::endl;
 }
 
 void Io::io_routine()
@@ -229,9 +224,7 @@ void Io::io_routine()
             case IOS_LOAD_RESULT:
                 load_result(); break;
             case IOS_MEMTEST:
-                std::cout << "Memtest: "
-                    << (memtest()? "SUCCEED" : "FAILED")
-                    << std::endl;
+                memtest();
             case IOS_ERROR:
             default:
                 should_stop = true;

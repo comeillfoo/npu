@@ -56,7 +56,7 @@ private:
     void store_image();
     void load_result();
     void wait_result();
-    bool memtest();
+    void memtest();
 };
 
 #endif // _IO_H_

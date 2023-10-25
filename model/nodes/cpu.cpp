@@ -19,7 +19,6 @@ CPU::CPU(sc_module_name nm, size_t _shiftout) :
     shiftout(_shiftout),
     weights{{0.0}},
     previous_output{0.0},
-    partial_products{{0.0}},
     sum{0.0},
     output{0.0}
 {
@@ -46,6 +45,7 @@ void CPU::bus_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     cpu_wr_o.write(true);
     wait();
     cpu_wr_o.write(false);
+    wait();
 }
 
 void CPU::bus_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
@@ -76,23 +76,18 @@ void CPU::cpu_routine()
             bus_read(0, previous_output);
             // read weights
             for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i)
-                bus_read((i + 2) << 9, weights[i]);
-
-            // calculate partial products
-            for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i)
-                for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
-                    partial_products[i][j] = weights[i][j] * previous_output[j];
+                bus_read((i + 2), weights[i]);
 
             // calculate output
             for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i) {
                 sum[i] = 0.0;
                 for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
-                    sum[i] += partial_products[i][j];
+                    sum[i] += weights[i][j] * previous_output[lea(i)];
                 output[lea(i)] = sigmoid(sum[i]);
             }
 
             // store output
-            bus_write(1 << 9, output);
+            bus_write(1, output);
             cpu_ready_o.write(true);
             wait();
         }
@@ -106,6 +101,15 @@ void CPU::cpu_routine()
             cpu_addr_bo.write(0);
             for (size_t i = 0; i < cpu_data_bo.size(); ++i)
                 cpu_data_bo[i].write(0.0);
+
+            for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i) {
+                sum[i] = 0.0;
+                for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j) {
+                    weights[i][j] = 0.0;
+                    previous_output[j] = 0.0;
+                    output[j] = 0.0;
+                }
+            }
             wait();
         }
     }

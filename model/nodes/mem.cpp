@@ -30,9 +30,12 @@ void Mem::bus_read()
 {
     size_t r = row(mem_addr_bi.read());
     if (mem_wr_i.read()) {
-        // std::cout << "Memory: write at " << r << std::endl;
-        for (size_t c = 0; c < CONFIG_MEMORY_COLS; ++c)
+        // std::cout << name() << ": write at " << r << ": { ";
+        for (size_t c = 0; c < CONFIG_MEMORY_COLS; ++c) {
             mem[r][c] = mem_data_bi[c].read();
+            // std::cout << mem[r][c] << " ";
+        }
+        // std::cout << "}" << std::endl;
     }
 }
 
@@ -40,8 +43,11 @@ void Mem::bus_write()
 {
     size_t r = row(mem_addr_bi.read());
     if(mem_rd_i.read()) {
-        // std::cout << "Memory: read at " << r << std::endl;
-        for (size_t c = 0; c < CONFIG_MEMORY_COLS; ++c)
+        // std::cout << name() << ": read at " << r << ": { ";
+        for (size_t c = 0; c < CONFIG_MEMORY_COLS; ++c) {
             mem_data_bo[c].write(mem[r][c]);
+            // std::cout << mem[r][c] << " ";
+        }
+        // std::cout << "}" << std::endl;
     }
 }

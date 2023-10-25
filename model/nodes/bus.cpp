@@ -55,19 +55,25 @@ void Bus::bus_arbiter()
     if (io_brq_i.read()) {
         io_bgt_o.write(true);
         state = BS_BUSY_IO;
+        // std::cout << name() << ": io granted" << std::endl;
     } else if (dma0_brq_i.read()) {
         dma0_bgt_o.write(true);
         state = BS_BUSY_DMA0;
+        // std::cout << name() << ": dma0 granted" << std::endl;
     } else if (dma1_brq_i.read()) {
         dma1_bgt_o.write(true);
         state = BS_BUSY_DMA1;
+        // std::cout << name() << ": dma1 granted" << std::endl;
     } else if (dma2_brq_i.read()) {
         dma2_bgt_o.write(true);
         state = BS_BUSY_DMA2;
+        // std::cout << name() << ": dma2 granted" << std::endl;
     } else if (dma3_brq_i.read()) {
         dma3_bgt_o.write(true);
         state = BS_BUSY_DMA3;
+        // std::cout << name() << ": dma3 granted" << std::endl;
     }
+    wait();
 }
 
 void Bus::bus_service(
@@ -106,7 +112,6 @@ void Bus::bus_service(
 void Bus::bus_routine()
 {
     while (true) {
-        wait();
         switch (state) {
             case BS_IDLE: bus_arbiter(); break;
             case BS_BUSY_IO:   bus_service_device(io); break;

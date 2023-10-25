@@ -33,17 +33,22 @@ void LocalMemDual::port_read(
     sc_vector<sc_in<double>> &data_bi)
 {
     const size_t r = row(addr_bi.read());
+    // std::cout << ": " << r << std::endl;
     for (size_t c = 0; c < CONFIG_MEMORY_COLS; ++c)
         mem[r][c] = data_bi[c].read();
 }
 
 void LocalMemDual::bus_read()
 {
-    if (lmd_0_rd_i.read())
+    if (lmd_0_wr_i.read()) {
+        // std::cout << name() << ": port 0";
         port_read(lmd_0_addr_bi, lmd_0_data_bi);
+    }
 
-    if (lmd_1_rd_i.read())
+    if (lmd_1_wr_i.read()) {
+        // std::cout << name() << ": port 1";
         port_read(lmd_1_addr_bi, lmd_1_data_bi);
+    }
 }
 
 void LocalMemDual::port_write(
@@ -57,9 +62,9 @@ void LocalMemDual::port_write(
 
 void LocalMemDual::bus_write()
 {
-    if (lmd_0_wr_i.read())
+    if (lmd_0_rd_i.read())
         port_write(lmd_0_addr_bi, lmd_0_data_bo);
 
-    if (lmd_1_wr_i.read())
+    if (lmd_1_rd_i.read())
         port_write(lmd_1_addr_bi, lmd_1_data_bo);
 }

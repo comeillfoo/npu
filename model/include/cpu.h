@@ -27,7 +27,6 @@ private:
     size_t shiftout;
     double weights[CPU_OUTPUT_LENGTH][CONFIG_BUS_WIDTH];
     double previous_output[CONFIG_BUS_WIDTH];
-    double partial_products[CPU_OUTPUT_LENGTH][CONFIG_BUS_WIDTH];
     double sum[CPU_OUTPUT_LENGTH];
     double output[CONFIG_BUS_WIDTH];
 

@@ -64,6 +64,7 @@ void DMA::lcmem_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     dma_lcmem_wr_o.write(true);
     wait();
     dma_lcmem_wr_o.write(false);
+    wait();
 }
 
 void DMA::lcmem_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
