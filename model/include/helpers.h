@@ -57,7 +57,7 @@
     sc_signal<bool> dma##n##_ready; dma##n.dma_ready_o(dma##n##_ready); \
     sc_signal<bool> dma##n##_cpu_rst; dma##n.dma_cpu_rst_o(dma##n##_cpu_rst); \
     sc_signal<bool> dma##n##_cpu_ready; dma##n.dma_cpu_ready_i(dma##n##_cpu_ready); \
-    CPU cpu##n("cpu" #n, 0 << 4); \
+    CPU cpu##n("cpu" #n, (n) << 4); \
     cpu##n.cpu_clk_i(clk); \
     cpu##n.cpu_rst_i(dma##n##_cpu_rst); \
     cpu##n.cpu_ready_o(dma##n##_cpu_ready); \

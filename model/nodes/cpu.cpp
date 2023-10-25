@@ -29,6 +29,8 @@ CPU::CPU(sc_module_name nm, size_t _shiftout) :
     for (size_t i = 0; i < cpu_data_bo.size(); ++i)
         cpu_data_bo[i].initialize(0.0);
 
+    // std::cout << name() << ": shift = " << shiftout << std::endl;
+
     SC_CTHREAD(cpu_routine, cpu_clk_i.pos());
 }
 
@@ -56,9 +58,12 @@ void CPU::bus_read(size_t memory_row, double data[CONFIG_BUS_WIDTH])
     wait();
     cpu_rd_o.write(false);
     wait();
-
-    for (size_t i = 0; i < cpu_data_bi.size(); ++i)
+    // std::cout << name() << ": read at " << (cpu_addr_bo.read() >> 9) << ": { ";
+    for (size_t i = 0; i < cpu_data_bi.size(); ++i) {
         data[i] = cpu_data_bi[i].read();
+        // std::cout << data[i] << " ";
+    }
+    // std::cout << "}" << std::endl;
 }
 
 size_t CPU::lea(size_t addr)
