@@ -100,7 +100,7 @@ void Io::store_weights()
 {
     std::cout << "$ store_weights " << weights_path << std::endl;
 
-    FILE* fweights = fopen(weights_path, "rb");
+    FILE* fweights = fopen(weights_path, "r");
     if (!fweights) {
         state = IOS_ERROR;
         return;
@@ -110,12 +110,13 @@ void Io::store_weights()
     for (size_t i = 0; i < count; ++i) {
         double weights_per_input[CONFIG_MAX_IMAGE_SIZE] = {0.0};
 
-        size_t n = fread(weights_per_input, sizeof(double),
-            (sizeof(weights_per_input) / sizeof(double)), fweights);
+        for (size_t j = 0; j < CONFIG_MAX_IMAGE_SIZE; ++j) {
+            size_t n = fscanf(fweights, "%lf", &weights_per_input[j]);
+            if (n < 1) {
+                state = IOS_ERROR;
+                goto err;
+            }
 
-        if (n < CONFIG_MAX_IMAGE_SIZE) {
-            state = IOS_ERROR;
-            goto err;
         }
         bus_write(i + CONFIG_LAYER_COUNT, weights_per_input);
     }
@@ -197,7 +198,7 @@ void Io::memtest()
         bus_write(i, a[i]);
     }
 
-    std::cout << "IO: memtest: ";
+    std::cout << name() << ": memtest: ";
     double b[CONFIG_MEMORY_COLS] = {0.0};
     // read from the memory
     for (size_t i = 0; i < (CONFIG_MEMORY_ROWS >> 4); ++i) {
@@ -213,7 +214,7 @@ void Io::memtest()
 
 void Io::io_routine()
 {
-    std::cout << "IO: connected" << std::endl;
+    std::cout << name() << ": connected" << std::endl;
     while (!should_stop) {
         switch (state) {
             case IOS_STORE_WEIGHTS:
@@ -232,6 +233,6 @@ void Io::io_routine()
                 break;
         }
     }
-    std::cout << "IO: disconnected" << std::endl;
+    std::cout << name() << ": disconnected" << std::endl;
     sc_stop();
 }

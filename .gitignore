@@ -5,6 +5,7 @@ build
 massif.out.*
 npu
 pad0
+*.dump
 *.log
 !.gitignore
 !data/**/*.bin

@@ -40,8 +40,12 @@ CPU::~CPU()
 
 void CPU::bus_write(size_t memory_row, double data[CONFIG_BUS_WIDTH])
 {
-    for (size_t i = 0; i < cpu_data_bo.size(); ++i)
+    // std::cout << name() << ": write at " << memory_row << ": { ";
+    for (size_t i = 0; i < cpu_data_bo.size(); ++i) {
         cpu_data_bo[i].write(data[i]);
+        // std::cout << data[i] << " ";
+    }
+    // std::cout << "}" << std::endl;
     cpu_addr_bo.write(memory_row << 9);
 
     cpu_wr_o.write(true);

@@ -49,7 +49,7 @@
     dev.preport##_brq_o(presig##_brq); dev.preport##_bgt_i(presig##_bgt)
 
 #define DECLARE_DMA_CPU_LMEM(n, shmem_t, shmem_w, lcmem_w, lcmem_t, clk, bus_width) \
-    DMA dma##n("dma" #n, n << 4); \
+    DMA dma##n("dma" #n, (n) << 4); \
     dma##n.dma_clk_i(clk); \
     sc_signal<bool> dma##n##_rst; \
     DECLARE_BUS_MATRIX_CLIENT_SIGNALS(dma##n, dma##n##_shmem, dma_shmem, double, CONFIG_MEMADDR_WIDTH, bus_width); \

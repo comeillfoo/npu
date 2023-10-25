@@ -392,8 +392,8 @@ int main(int argc, char** argv)
 
     // save the weights for SystemC model
     int ret = 0;
-    const char* weights_p = "weights.bin";
-    FILE* weights_f = fopen(weights_p, "wb");
+    const char* weights_p = "weights.dump";
+    FILE* weights_f = fopen(weights_p, "w");
     if (!weights_f) {
         int err = errno;
         perror("Cannot save tuned weights");
@@ -404,13 +404,19 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < MAX_NEURALS_PER_LAYER_OUT; ++i) {
             double out_weights[MAX_NEURALS_PER_LAYER_OUT] = {0.0};
             if (k < MAX_LAYERS && i < MAX_NEURALS_PER_LAYER)
-                memcpy(out_weights, weights[k][i], sizeof(double) * MAX_NEURALS_PER_LAYER);
-            size_t n = fwrite(out_weights, sizeof(double), MAX_NEURALS_PER_LAYER_OUT, weights_f);
-            if (MAX_NEURALS_PER_LAYER_OUT > n) {
-                ret = errno;
-                perror("Cannot save weights");
-                goto W_fclose;
+                for (size_t j = 0; j < MAX_NEURALS_PER_LAYER; ++j)
+                    out_weights[j] = weights[k][i][j];
+                // memcpy(out_weights, weights[k][i], sizeof(double) * MAX_NEURALS_PER_LAYER);
+            // size_t n = fwrite(out_weights, sizeof(double), MAX_NEURALS_PER_LAYER_OUT, weights_f);
+            for (size_t j = 0; j < MAX_NEURALS_PER_LAYER_OUT; ++j) {
+                size_t n = fprintf(weights_f, "%lf ", out_weights[j]);
+                if (1 > n) {
+                    ret = errno;
+                    perror("Cannot save weights");
+                    goto W_fclose;
+                }
             }
+            fprintf(weights_f, "\n");
         }
 W_fclose:
     if (fclose(weights_f)) {
