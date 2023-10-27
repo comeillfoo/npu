@@ -88,11 +88,15 @@ void CPU::cpu_routine()
                 bus_read((i + 2), weights[i]);
 
             // calculate output
+            bool is_complemented = false;
             for (size_t i = 0; i < CPU_OUTPUT_LENGTH; ++i) {
                 sum[i] = 0.0;
-                for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j)
-                    sum[i] += weights[i][j] * previous_output[lea(i)];
-                output[lea(i)] = sigmoid(sum[i]);
+                for (size_t j = 0; j < CONFIG_BUS_WIDTH; ++j) {
+                    sum[i] += weights[i][j] * previous_output[j];
+                    if (weights[i][j] != 0.0 && previous_output[j] != 0.0)
+                        is_complemented = true;
+                }
+                output[lea(i)] = (sum[i] == 0.0 && !is_complemented)? 0.0 : sigmoid(sum[i]);
             }
 
             // store output
